@@ -3,7 +3,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, ActivityType, Events, ChannelType } = require('discord.js');
 const { xpTickLoop } = require('./utils/xpUtils');
-const { getInitialData, getData, saveData } = require('./utils/db');
+const { getInitialData, getData, saveData } = require('./utils/db'); 
 const { updateAllCommands } = require('./handlers/commandHandler');
 const eventHandler = require('./handlers/eventHandler');
 const config = require('./config');
