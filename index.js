@@ -9,6 +9,7 @@ const eventHandler = require('./handlers/eventHandler');
 const config = require('./config');
 const { AI_STATUS, askGemini, getAiUnavailableMessage } = require('./utils/gemini');
 const db = require('./utils/db');
+const path = require('path');
 // Inizializzazione Dati (per evitare crash)
 db.getInitialData();
 
@@ -33,7 +34,8 @@ client.isPlayingDayZ = (member) => {
 // --------------------------------------------------------
 // GESTIONE EVENTI E COMANDI (Handler)
 // --------------------------------------------------------
-
+const commandsPath = path.join(__dirname, 'commands');
+commandHandler.loadCommands(commandsPath);
 eventHandler.loadEvents(client);
 updateAllCommands(client);
 
