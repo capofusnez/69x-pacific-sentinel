@@ -10,7 +10,7 @@ const config = require('./config');
 const { AI_STATUS, askGemini, getAiUnavailableMessage } = require('./utils/gemini');
 const db = require('./utils/db');
 // Inizializzazione Dati (per evitare crash)
-getInitialData();
+db.getInitialData();
 
 const client = new Client({
     intents: [
