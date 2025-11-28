@@ -135,32 +135,3 @@ module.exports = {
     }, // <--- Chiude la funzione execute(interaction, client)
 }; // <--- Chiude module.exports
 
-// Logica per i messaggi nei canali AI (non è un'interazione, ma un evento 'messageCreate')
-// *Questo blocco è fuori da module.exports ma è un listener vitale*
-
-client.on(Events.MessageCreate, async message => {
-    if (message.author.bot || message.channel.type !== ChannelType.GuildText) return;
-    
-    const aiSessions = getData(config.FILES.AI_SESSIONS);
-    
-    if (aiSessions[message.channelId] && message.author.id === aiSessions[message.channelId].userId) {
-        
-        // AGGIORNA ATTIVITÀ AI
-        aiSessions[message.channelId].lastActivity = Date.now();
-        saveData(config.FILES.AI_SESSIONS, aiSessions);
-        
-        // INVIA A GEMINI
-        await message.channel.sendTyping();
-        try {
-            const answer = await askGemini(message.content);
-            await message.reply(answer);
-        } catch (err) {
-            if (err.message === "AI_UNAVAILABLE") {
-                await message.reply(getAiUnavailableMessage());
-            } else {
-                console.error("Errore Gemini in sessione AI:", err);
-                await message.reply("⚠ Errore comunicando con l'AI. Riprova più tardi.");
-            }
-        }
-    }
-});
