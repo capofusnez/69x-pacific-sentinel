@@ -1,74 +1,95 @@
 // utils/db.js
 
-const fs = require("fs");
-const path = require("path");
-const config = require("../config");
-
-// Mantiene i dati in memoria (simulando un DB in memoria)
-const cache = {};
+const fs = require('fs');
+const path = require('path');
+const config = require('../config');
 
 /**
- * Carica un file JSON e lo memorizza nella cache
+ * Funzione per ottenere il percorso completo di un file di dati.
+ * @param {string} filename Il nome del file (es. 'levels.json').
+ * @returns {string} Il percorso assoluto del file.
  */
-async function loadData(fileName) {
-    const filePath = path.join(config.DATA_PATH, fileName);
+function getFilePath(filename) {
+    return path.join(__dirname, '..', 'data', filename);
+}
+
+/**
+ * Inizializza i file JSON se non esistono.
+ */
+function getInitialData() {
+    console.log('\n--- Inizializzazione Dati ---');
+
+    // Mappa dei nomi dei file ai loro contenuti iniziali
+    const initialContents = {
+        [config.FILES.SERVER_CONFIG]: { name: "69x Pacific Land...", ip: "..." },
+        [config.FILES.LEVELS]: {},
+        [config.FILES.AI_SESSIONS]: {},
+        [config.FILES.PERMISSIONS]: { allowedRoles: [], ownerOverride: true },
+        [config.FILES.RULES_MESSAGE]: {}
+    };
+
+    let allLoaded = true;
+    
+    for (const [key, initialData] of Object.entries(initialContents)) {
+        const filePath = getFilePath(key);
+        try {
+            if (!fs.existsSync(filePath) || fs.statSync(filePath).size === 0) {
+                fs.writeFileSync(filePath, JSON.stringify(initialData, null, 4));
+                console.log(`✅ File ${key} creato e inizializzato.`);
+            } else {
+                console.log(`✅ ${key} caricato.`);
+            }
+        } catch (error) {
+            console.error(`❌ Errore durante l'inizializzazione del file ${key}:`, error.message);
+            allLoaded = false;
+        }
+    }
+
+    if (allLoaded) {
+        console.log('----------------------------');
+        return true;
+    } else {
+        console.log('----------------------------');
+        return false;
+    }
+}
+
+/**
+ * Legge i dati da un file JSON.
+ * @param {string} filename Il nome del file.
+ * @returns {object|null} Il contenuto del file come oggetto JSON.
+ */
+function getData(filename) {
     try {
-        if (!fs.existsSync(config.DATA_PATH)) {
-            fs.mkdirSync(config.DATA_PATH, { recursive: true });
-        }
-        if (fs.existsSync(filePath)) {
-            const raw = fs.readFileSync(filePath, "utf8");
-            cache[fileName] = JSON.parse(raw);
-            return cache[fileName];
-        } else {
-            cache[fileName] = {};
-            console.log(`⚠ ${fileName} non trovato, creato oggetto vuoto.`);
-            await saveData(fileName, cache[fileName]);
-            return cache[fileName];
-        }
-    } catch (err) {
-        console.error(`⚠ Errore nel caricare ${fileName}:`, err);
-        cache[fileName] = {}; // Fallback sicuro
-        return cache[fileName];
+        const filePath = getFilePath(filename);
+        const data = fs.readFileSync(filePath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.error(`Errore leggendo i dati da ${filename}:`, error.message);
+        return null;
     }
 }
 
 /**
- * Salva i dati di un file JSON (operazione sincrona/bloccante)
+ * Salva un oggetto JavaScript in un file JSON.
+ * @param {string} filename Il nome del file.
+ * @param {object} data L'oggetto da salvare.
  */
-function saveData(fileName, data) {
-    const filePath = path.join(config.DATA_PATH, fileName);
+function saveData(filename, data) {
     try {
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-    } catch (err) {
-        console.error(`⚠ Errore nel salvare ${fileName}:`, err);
+        const filePath = getFilePath(filename);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 4), 'utf8');
+    } catch (error) {
+        console.error(`Errore salvando i dati in ${filename}:`, error.message);
     }
 }
 
-/**
- * Ottiene i dati dalla cache
- */
-function getData(fileName) {
-    return cache[fileName] || {};
-}
-
-// Carica tutti i file all'avvio
-async function loadAllData() {
-    for (const key in config.FILES) {
-        const fileName = config.FILES[key];
-        await loadData(fileName);
-        if (fileName === config.FILES.PERMISSIONS) {
-             console.log("🔐 Permessi caricati:", cache[fileName]);
-        } else if (fileName === config.FILES.RULES_MESSAGE) {
-             console.log("📜 Info messaggio regole caricata:", cache[fileName]);
-        } else {
-             console.log(`✅ ${fileName} caricato.`);
-        }
-    }
-}
+// --------------------------------------------------------
+// ESPORTAZIONE MODULI
+// --------------------------------------------------------
 
 module.exports = {
-    loadAllData,
+    getInitialData, // <-- QUESTA ESPORTAZIONE DEVE ESSERE PRESENTE
     getData,
-    saveData
+    saveData,
 };
