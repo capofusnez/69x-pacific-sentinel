@@ -71,11 +71,27 @@ module.exports = {
     // ------------------------------------------------------------
     // TICKET
     // ------------------------------------------------------------
-    TICKET_TYPES: {
-        support: { label: "🧰 Supporto generale", descriptionIt: "Supporto generale / domande sul server.", descriptionEn: "General support / questions about the server." },
-        bug: { label: "🛠 Bug / Problema tecnico", descriptionIt: "Segnala bug o problemi tecnici.", descriptionEn: "Report bugs or technical issues." },
-        report: { label: "🚨 Segnalazione giocatore / comportamento", descriptionIt: "Segnala cheater, insulti, comportamenti scorretti.", descriptionEn: "Report cheaters, insults or bad behavior." },
-        suggestion: { label: "💡 Richiesta / Suggestion", descriptionIt: "Proposte, idee, modifiche al server.", descriptionEn: "Suggestions, ideas, changes to the server." },
-        ban: { label: "⚖️ Ban & Appeal", descriptionIt: "Richieste di unban o chiarimenti sui ban.", descriptionEn: "Unban requests or ban clarification." }
+// config.js (NUOVO BLOCCO DA AGGIUNGERE/CORREGGERE)
+
+TICKET_TYPES: {
+    general: {
+        label: "💼 Supporto Generale", // <-- Qui devi includere emoji + testo
+        category: 'YOUR_GENERAL_TICKET_CATEGORY_ID',
+        style: ButtonStyle.Secondary
     },
-};
+    bug: {
+        label: "⚙️ Segnalazione Bug",
+        category: 'YOUR_BUG_TICKET_CATEGORY_ID',
+        style: ButtonStyle.Danger // Rosso
+    },
+    report: {
+        label: "🚨 Segnalazione Utente",
+        category: 'YOUR_REPORT_TICKET_CATEGORY_ID',
+        style: ButtonStyle.Danger
+    },
+    suggestions: {
+        label: "💡 Suggerimento/Idea",
+        category: 'YOUR_SUGGESTION_CATEGORY_ID',
+        style: ButtonStyle.Success // Verde
+    }
+},
