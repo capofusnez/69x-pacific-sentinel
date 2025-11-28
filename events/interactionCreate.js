@@ -30,7 +30,7 @@ module.exports = {
                 console.error(`💥 Errore nell'esecuzione del comando /${interaction.commandName}:`, error);
 
                 // ⚠️ SOSTITUISCI QUESTO ID con il tuo ID Utente Discord per ricevere i DM di errore
-                const adminUser = await client.users.fetch('IL_TUO_ID_UTENTE_DISCORD').catch(() => null); 
+                const adminUser = await client.users.fetch('441203826322702347').catch(() => null); 
                 
                 // 1. Notifica l'utente che il comando ha fallito (messaggio effimero)
                 const userErrorMsg = '⚠️ Si è verificato un errore eseguendo il comando! Lo staff è stato avvisato.';
