@@ -31,16 +31,23 @@ module.exports = {
         const row = new ActionRowBuilder();
         
         // Aggiungi un pulsante per ogni tipo di ticket
+       // Aggiungi un pulsante per ogni tipo di ticket
         Object.keys(config.TICKET_TYPES).forEach(key => {
             const typeInfo = config.TICKET_TYPES[key];
+    
+            // Controlla se l'etichetta ha un'emoji (il primo elemento dopo lo split)
+            const labelParts = typeInfo.label.split(' ');
+            const emoji = labelParts.length > 1 && labelParts[0].length <= 2 ? labelParts[0] : null;
+            const labelText = emoji ? labelParts.slice(1).join(' ') : typeInfo.label;
+    
             row.addComponents(
                 new ButtonBuilder()
                     .setCustomId(`ticket_create_${key}`)
-                    .setLabel(typeInfo.label.split(' ')[0]) // Usa solo la prima parola per etichetta corta
-                    .setStyle(ButtonStyle.Secondary)
-            );
-        });
-
+                    .setLabel(labelText) // <-- ORA USA L'ETICHETTA COMPLETA (es. "Supporto Generale")
+                    .setEmoji(emoji)     // <-- USA L'EMOJI SE DEFINITA
+                    .setStyle(typeInfo.style || ButtonStyle.Secondary) // <-- Usa lo stile definito in config o Secondary
+    );
+});
         try {
             await interaction.channel.send({
                 embeds: [ticketEmbed],
