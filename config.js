@@ -1,7 +1,8 @@
 // config.js
 const path = require("path");
 
-const { ActivityType } = require("discord.js");
+// Importa le costanti necessarie da discord.js
+const { ActivityType, ButtonStyle } = require("discord.js"); 
 
 module.exports = {
     // ------------------------------------------------------------
@@ -50,7 +51,7 @@ module.exports = {
     
     XP_GAINS: {
         // XP guadagnato ogni XP_TICK_INTERVAL_MIN se l'utente sta giocando a DayZ
-        DAYZ_PLAYING: 25, // <--- VALORE AGGIUNTO (era undefined)
+        DAYZ_PLAYING: 25, 
         // Altri XP di base (opzionale)
         MESSAGE_SEND: 1,
         // NOME DEL GIOCO DA CERCARE NELLO STATO DI DISCORD
@@ -59,39 +60,7 @@ module.exports = {
     
     FRESH_SPAWN_ROLE_ID: "1442570652228784240", // Ruolo assegnato dopo l'accettazione delle regole
 
+    // Lista dei ruoli per il sistema di livelli
     RANK_ROLES: [
-        { level: 0,  name: "Fresh Spawn",   roleId: "1442570652228784240" },
-        { level: 1,  name: "Survivor",       roleId: "1442570651696107711" },
-        { level: 5,  name: "Veteran Raider", roleId: "1442570650584875019" },
-        { level: 10, name: "Field Officer", roleId: "1442570649724784671" },
-        { level: 15, name: "Command Unit",   roleId: "1442570648705568798" },
-        { level: 20, name: "Overlord",       roleId: "1442570648022024292" }
-    ],
-
-    // ------------------------------------------------------------
-    // TICKET
-    // ------------------------------------------------------------
-// config.js (NUOVO BLOCCO DA AGGIUNGERE/CORREGGERE)
-
-TICKET_TYPES: {
-    general: {
-        label: "💼 Supporto Generale", // <-- Qui devi includere emoji + testo
-        category: 'YOUR_GENERAL_TICKET_CATEGORY_ID',
-        style: ButtonStyle.Secondary
-    },
-    bug: {
-        label: "⚙️ Segnalazione Bug",
-        category: 'YOUR_BUG_TICKET_CATEGORY_ID',
-        style: ButtonStyle.Danger // Rosso
-    },
-    report: {
-        label: "🚨 Segnalazione Utente",
-        category: 'YOUR_REPORT_TICKET_CATEGORY_ID',
-        style: ButtonStyle.Danger
-    },
-    suggestions: {
-        label: "💡 Suggerimento/Idea",
-        category: 'YOUR_SUGGESTION_CATEGORY_ID',
-        style: ButtonStyle.Success // Verde
-    }
-},
+        { level: 0,  name: "Fresh Spawn",   roleId: "1442570652228784240" },
+        { level: 1,  name: "Survivor",      roleId: "1442
