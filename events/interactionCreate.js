@@ -30,7 +30,7 @@ module.exports = {
                 console.error(`💥 Errore nell'esecuzione del comando /${interaction.commandName}:`, error);
 
                 // ⚠️ SOSTITUISCI QUESTO ID con il tuo ID Utente Discord per ricevere i DM di errore
-                const adminUser = await client.users.fetch('441203826322702347').catch(() => null); 
+                const adminUser = await client.users.fetch('IL_TUO_ID_UTENTE_DISCORD').catch(() => null); 
                 
                 // 1. Notifica l'utente che il comando ha fallito (messaggio effimero)
                 const userErrorMsg = '⚠️ Si è verificato un errore eseguendo il comando! Lo staff è stato avvisato.';
@@ -43,7 +43,7 @@ module.exports = {
                 // 2. Notifica l'amministratore (te) tramite messaggio privato (DM)
                 if (adminUser) {
                     const dmMessage = 
-                        `🚨 **ERRORE CRITICO NON BLUCCANTE**\n` +
+                        `🚨 **ERRORE CRITICO NON BLOCCANTE**\n` +
                         `**Comando fallito:** /${interaction.commandName}\n` +
                         `**Utente:** ${interaction.user.tag} (${interaction.user.id})\n` +
                         `**Errore Dettagliato:** \`\`\`\n${error.stack ? error.stack.substring(0, 1000) : error.message}\n\`\`\``;
@@ -113,4 +113,54 @@ module.exports = {
 
             if (type === "ticket" && action === "close") {
                 // LOGICA CHIUSURA TICKET
-                if (interaction.
+                // Controllo se il canale è un ticket (basato sul topic)
+                if (interaction.channel.topic && interaction.channel.topic.includes("Ticket")) {
+                    await interaction.deferReply({ ephemeral: false });
+                    await interaction.editReply("🔒 Archiviazione e chiusura del ticket in corso...");
+                    await moveTicketToArchive(interaction.channel);
+                    await interaction.editReply("✅ Ticket archiviato! Il canale verrà eliminato a breve (o bloccato).");
+                } else {
+                    await interaction.reply({ content: "Questo non sembra un canale ticket.", ephemeral: true });
+                }
+                return;
+            }
+            
+            if (type === "xp" && action === "check") {
+                 // LOGICA CONTROLLO XP
+                const info = getUserLevelInfo(guild.id, member.id);
+                await interaction.reply({ content: `📈 **Livello:** ${info.level}\n**XP Totali:** ${info.xp}\n**Progresso:** ${info.progressPercent}% al prossimo livello.`, ephemeral: true });
+                return;
+            }
+        }
+    }, // <--- Chiude la funzione execute(interaction, client)
+}; // <--- Chiude module.exports
+
+// Logica per i messaggi nei canali AI (non è un'interazione, ma un evento 'messageCreate')
+// *Questo blocco è fuori da module.exports ma è un listener vitale*
+
+client.on(Events.MessageCreate, async message => {
+    if (message.author.bot || message.channel.type !== ChannelType.GuildText) return;
+    
+    const aiSessions = getData(config.FILES.AI_SESSIONS);
+    
+    if (aiSessions[message.channelId] && message.author.id === aiSessions[message.channelId].userId) {
+        
+        // AGGIORNA ATTIVITÀ AI
+        aiSessions[message.channelId].lastActivity = Date.now();
+        saveData(config.FILES.AI_SESSIONS, aiSessions);
+        
+        // INVIA A GEMINI
+        await message.channel.sendTyping();
+        try {
+            const answer = await askGemini(message.content);
+            await message.reply(answer);
+        } catch (err) {
+            if (err.message === "AI_UNAVAILABLE") {
+                await message.reply(getAiUnavailableMessage());
+            } else {
+                console.error("Errore Gemini in sessione AI:", err);
+                await message.reply("⚠ Errore comunicando con l'AI. Riprova più tardi.");
+            }
+        }
+    }
+});
