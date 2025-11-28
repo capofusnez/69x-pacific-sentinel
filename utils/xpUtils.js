@@ -1,180 +1,158 @@
 // utils/xpUtils.js
 
-const config = require("../config");
-const { getData, saveData } = require("./db");
-const { ActivityType } = require("discord.js"); 
+const { getData, saveData } = require('./db');
+const config = require('../config');
+const { getNextLevelXp } = require('./xpFormulas');
 
-// ------------------------------------------------------------
-// LOGICA XP
-// ------------------------------------------------------------
-
-/**
- * Assicura che i dati utente esistano nel file levels.json e li inizializza a xp: 0 se necessario.
- * @param {string} guildId - L'ID del server.
- * @param {string} userId - L'ID dell'utente.
- * @returns {object} I dati di tutti i livelli (levelsData).
- */
-function ensureUserData(guildId, userId) {
-    const levelsData = getData(config.FILES.LEVELS);
-    if (!levelsData[guildId]) levelsData[guildId] = {};
-    if (!levelsData[guildId][userId]) levelsData[guildId][userId] = { xp: 0 };
-    return levelsData;
-}
+const XP_TICK_INTERVAL_MS = config.XP_TICK_INTERVAL_MIN * 60 * 1000;
+const DAYZ_XP_PER_TICK = config.XP_GAINS.DAYZ_PLAYING;
 
 /**
- * Calcola le informazioni di livello, progresso e XP necessari dato un valore di XP totale.
- * Formula: Level = floor(sqrt(XP / 100))
- * @param {number} xp - L'XP totale dell'utente.
- * @returns {object} Informazioni dettagliate sul livello.
+ * Funzione per trovare il ruolo di livello più alto che un utente si merita in base al suo XP/Livello.
+ * @param {number} currentLevel Il livello attuale dell'utente.
+ * @returns {string|null} L'ID del ruolo target o null se non merita un ruolo.
  */
-function getLevelInfo(xp) {
-    if (xp < 0) xp = 0;
-    
-    const level = Math.floor(Math.sqrt(xp / 100));
-    const currentLevelXP = level * level * 100;
-    const nextLevelXP = (level + 1) * (level + 1) * 100;
-    
-    const progress = xp - currentLevelXP;
-    const needed = nextLevelXP - currentLevelXP;
-    
-    const progressPercent = needed > 0 ? Math.floor((progress / needed) * 100) : 100;
-    
-    return { level, xp, progress, needed, nextLevelXP, progressPercent };
-}
+function getTargetRoleId(currentLevel) {
+    const levelRoles = config.ROLES.LEVEL_ROLES;
+    let targetRoleId = null;
 
-/**
- * Aggiunge (o rimuove) XP a un utente.
- * @param {string} guildId - L'ID del server.
- * @param {string} userId - L'ID dell'utente.
- * @param {number} amount - La quantità di XP da aggiungere.
- * @returns {object} Risultato dell'operazione, incluso se c'è stato un level-up.
- */
-function addXP(guildId, userId, amount) {
-    if (amount === 0) return { leveledUp: false, newLevel: 0, xp: 0 };
-    const levelsData = ensureUserData(guildId, userId);
-    const data = levelsData[guildId][userId];
-
-    const beforeInfo = getLevelInfo(data.xp);
-    const beforeLevel = beforeInfo.level;
-
-    data.xp += amount;
-    if (data.xp < 0) data.xp = 0; // Assicura che l'XP non sia negativo
-
-    const afterInfo = getLevelInfo(data.xp);
-    const afterLevel = afterInfo.level;
-
-    saveData(config.FILES.LEVELS, levelsData);
-
-    return {
-        leveledUp: afterLevel > beforeLevel,
-        newLevel: afterLevel,
-        xp: data.xp
-    };
-}
-
-/**
- * Ottiene le informazioni di livello attuali per un utente.
- * @param {string} guildId - L'ID del server.
- * @param {string} userId - L'ID dell'utente.
- * @returns {object} Informazioni dettagliate sul livello.
- */
-function getUserLevelInfo(guildId, userId) {
-    const levelsData = getData(config.FILES.LEVELS);
-    if (!levelsData[guildId] || !levelsData[guildId][userId]) {
-        return getLevelInfo(0);
-    }
-    return getLevelInfo(levelsData[guildId][userId].xp);
-}
-
-// ------------------------------------------------------------
-// LOGICA RUOLI DI RANGO
-// ------------------------------------------------------------
-
-/**
- * Aggiorna i ruoli di rango di un membro in base al suo livello.
- * @param {Guild} guild - L'oggetto Guild di Discord.
- * @param {GuildMember} member - L'oggetto GuildMember.
- * @param {number} newLevel - Il livello attuale dell'utente.
- */
-async function updateRankRoles(guild, member, newLevel) {
-    try {
-        // Filtra i ruoli disponibili che l'utente si è guadagnato
-        const availableRanks = config.RANK_ROLES.filter(r => newLevel >= r.level);
-        if (availableRanks.length === 0) return;
-
-        // Il miglior rango guadagnato (il ruolo con il livello più alto che ha raggiunto)
-        const bestRank = availableRanks[availableRanks.length - 1];
-        const roleToAdd = guild.roles.cache.get(bestRank.roleId);
-
-        if (!roleToAdd) {
-            console.log(`⚠ Ruolo ID "${bestRank.roleId}" (${bestRank.name}) non trovato nel server. Controlla config.js.`);
-            return;
+    // Itera sui ruoli in ordine per trovare il più alto che l'utente si merita
+    for (const [level, roleId] of Object.entries(levelRoles)) {
+        if (currentLevel >= parseInt(level)) {
+            targetRoleId = roleId;
         }
+    }
+    return targetRoleId;
+}
 
-        // Se ha già il ruolo corretto, non fare nulla
-        if (member.roles.cache.has(roleToAdd.id)) return;
 
-        // Rimuove tutti gli altri ruoli di rango per evitare accumuli
-        for (const rank of config.RANK_ROLES) {
-            if (rank.roleId === roleToAdd.id) continue;
-            const oldRole = guild.roles.cache.get(rank.roleId);
-            if (oldRole && member.roles.cache.has(oldRole.id)) {
-                await member.roles.remove(oldRole).catch(() => {});
+/**
+ * Verifica l'XP di un membro e assegna o rimuove i ruoli di grado necessari.
+ * Questa funzione gestisce sia la promozione che la retrocessione (demotion).
+ * @param {GuildMember} member Il membro Discord da controllare.
+ * @param {number} currentXp L'esperienza attuale del membro.
+ * @param {number} currentLevel Il livello attuale del membro.
+ * @param {Client} client L'istanza del client Discord.
+ */
+async function checkAndSetRank(member, currentXp, currentLevel, client) {
+    const guildRoles = config.ROLES.LEVEL_ROLES;
+    const targetRoleId = getTargetRoleId(currentLevel);
+
+    if (!member.guild) return;
+
+    // Se l'utente non merita alcun ruolo di livello, assicurati di rimuovere tutti i ruoli di livello
+    if (!targetRoleId) {
+        for (const roleId of Object.values(guildRoles)) {
+            if (member.roles.cache.has(roleId)) {
+                await member.roles.remove(roleId).catch(err => console.error(`[XP ERROR] Errore rimozione ruolo ${roleId}: ${err.message}`));
             }
         }
+        return;
+    }
 
-        // Aggiunge il nuovo ruolo
-        await member.roles.add(roleToAdd).catch(() => {});
-        console.log(`✅ Assegnato ruolo "${bestRank.name}" a ${member.user.tag} (lvl ${newLevel}).`);
-    } catch (err) {
-        console.error("⚠ Errore in updateRankRoles:", err);
+    // Processa la promozione/retrocessione
+    for (const [level, roleId] of Object.entries(guildRoles)) {
+        const role = member.guild.roles.cache.get(roleId);
+        if (!role) continue; // Salta se il ruolo non è nel server
+
+        if (roleId === targetRoleId) {
+            // PROMOZIONE: Aggiungi il ruolo bersaglio se non lo ha
+            if (!member.roles.cache.has(roleId)) {
+                await member.roles.add(roleId).catch(err => console.error(`[XP ERROR] Errore aggiunta ruolo ${roleId}: ${err.message}`));
+                console.log(`[XP] Promosso ${member.user.tag} al grado: ${role.name}`);
+                // [OPZIONALE: Invia messaggio di promozione se desiderato]
+            }
+        } else {
+            // RETROCESSIONE/PULIZIA: Rimuovi tutti gli altri ruoli di livello
+            if (member.roles.cache.has(roleId)) {
+                await member.roles.remove(roleId).catch(err => console.error(`[XP ERROR] Errore rimozione ruolo ${roleId}: ${err.message}`));
+                console.log(`[XP] Rimosso il grado ${role.name} da ${member.user.tag} (nuovo grado: ${member.guild.roles.cache.get(targetRoleId).name})`);
+            }
+        }
     }
 }
 
-// ------------------------------------------------------------
-// LOOP XP A TEMPO
-// ------------------------------------------------------------
 
 /**
- * Avvia il loop che controlla se gli utenti stanno giocando a DayZ e assegna XP.
- * @param {Client} client - L'oggetto Client di Discord.
+ * Aggiorna i dati XP e livello di un membro e chiama la funzione per aggiornare il grado.
+ * @param {GuildMember} member Il membro Discord da aggiornare.
+ * @param {number} xpAmount L'ammontare di XP da aggiungere (o sottrarre se negativo).
+ * @param {Client} client L'istanza del client Discord.
+ */
+function updateMemberXp(member, xpAmount, client) {
+    if (member.user.bot) return;
+
+    const levelsData = getData(config.FILES.LEVELS);
+    const userId = member.id;
+
+    if (!levelsData[userId]) {
+        levelsData[userId] = { xp: 0, level: 0 };
+    }
+
+    let { xp, level } = levelsData[userId];
+    
+    // Aggiorna XP
+    xp += xpAmount;
+
+    // Impedisci XP negativi
+    if (xp < 0) xp = 0;
+
+    // Calcola il nuovo livello
+    let needsUpdate = false;
+    let newLevel = level;
+    
+    // Controlla se l'utente è salito di livello
+    while (xp >= getNextLevelXp(newLevel)) {
+        newLevel++;
+        needsUpdate = true;
+    }
+
+    // Controlla se l'utente è sceso di livello (demotion di livello XP)
+    // Non è necessario un loop "while" qui, basta un ricalcolo basato sull'XP totale
+    // La logica di retrocessione è già coperta dal controllo del ruolo in checkAndSetRank.
+    
+    // Se il livello è cambiato, o se l'XP è sceso/salito in modo significativo, controlla il ruolo
+    if (newLevel !== level || needsUpdate || xpAmount < 0) {
+        levelsData[userId] = { xp, level: newLevel };
+        saveData(config.FILES.LEVELS, levelsData);
+
+        // Chiama la funzione che gestisce la promozione/retrocessione del ruolo
+        checkAndSetRank(member, xp, newLevel, client);
+    } else {
+        levelsData[userId] = { xp, level };
+        saveData(config.FILES.LEVELS, levelsData);
+    }
+}
+
+/**
+ * Loop principale che verifica i membri che giocano a DayZ e aggiunge XP.
+ * @param {Client} client L'istanza del client Discord.
  */
 function xpTickLoop(client) {
-    console.log("⏱ Loop XP DayZ avviato.");
+    console.log(`⏱ Loop XP DayZ avviato.`);
+
     setInterval(async () => {
         try {
             const guild = client.guilds.cache.get(config.SERVER_ID);
             if (!guild) return;
 
-            // Assicura che la cache dei membri sia piena
-            await guild.members.fetch({ force: false }).catch(err => { console.error("Errore nel fetch dei membri:", err); });
+            const members = await guild.members.fetch().catch(() => null);
+            if (!members) return;
 
-            for (const member of guild.members.cache.values()) {
-                if (member.user.bot) continue;
-
-                // Controlla se il membro sta giocando a DayZ (funzione definita in index.js)
+            members.forEach(member => {
                 if (client.isPlayingDayZ(member)) {
-                    const result = addXP(guild.id, member.id, config.XP_PER_TICK);
-                    
-                    if (result.leveledUp) {
-                        await updateRankRoles(guild, member, result.newLevel);
-                        
-                        // Opzionale: notifica l'utente/canale se vuoi fare un annuncio
-                        // console.log(`🎉 ${member.user.tag} è salito al livello ${result.newLevel}!`);
-                    }
+                    // Aggiunge XP solo se il membro sta giocando a DayZ
+                    updateMemberXp(member, DAYZ_XP_PER_TICK, client);
                 }
-            }
-        } catch (err) {
-            console.error("⚠ Errore nel loop XP DayZ:", err);
+            });
+
+        } catch (error) {
+            console.error("Errore nel loop XP DayZ:", error);
         }
-    }, config.XP_TICK_INTERVAL_MS);
+    }, XP_TICK_INTERVAL_MS);
 }
 
-
 module.exports = {
-    addXP,
-    getUserLevelInfo,
-    updateRankRoles,
-    getLevelInfo,
-    xpTickLoop
+    xpTickLoop,
+    updateMemberXp, // Utile per i comandi amministrativi come /addxp e /removexp
 };
