@@ -2,13 +2,13 @@
 
 const { getData, saveData } = require('./db');
 const config = require('../config');
-const { getNextLevelXp } = require('./xpFormulas');
+const { getNextLevelXp } = require('./xpFormulas'); // <-- Ora il require funziona
 
 const XP_TICK_INTERVAL_MS = config.XP_TICK_INTERVAL_MIN * 60 * 1000;
 const DAYZ_XP_PER_TICK = config.XP_GAINS.DAYZ_PLAYING;
 
 /**
- * Funzione per trovare il ruolo di livello più alto che un utente si merita in base al suo XP/Livello.
+ * Funzione per trovare il ruolo di livello più alto che un utente si merita in base al suo livello.
  * @param {number} currentLevel Il livello attuale dell'utente.
  * @returns {string|null} L'ID del ruolo target o null se non merita un ruolo.
  */
@@ -17,6 +17,7 @@ function getTargetRoleId(currentLevel) {
     let targetRoleId = null;
 
     // Itera sui ruoli in ordine per trovare il più alto che l'utente si merita
+    // Si assume che config.ROLES.LEVEL_ROLES sia ordinato per Livello (chiave) crescente.
     for (const [level, roleId] of Object.entries(levelRoles)) {
         if (currentLevel >= parseInt(level)) {
             targetRoleId = roleId;
@@ -28,46 +29,34 @@ function getTargetRoleId(currentLevel) {
 
 /**
  * Verifica l'XP di un membro e assegna o rimuove i ruoli di grado necessari.
- * Questa funzione gestisce sia la promozione che la retrocessione (demotion).
+ * Gestisce sia la promozione che la retrocessione (demotion).
  * @param {GuildMember} member Il membro Discord da controllare.
- * @param {number} currentXp L'esperienza attuale del membro.
  * @param {number} currentLevel Il livello attuale del membro.
  * @param {Client} client L'istanza del client Discord.
  */
-async function checkAndSetRank(member, currentXp, currentLevel, client) {
+async function checkAndSetRank(member, currentLevel, client) {
     const guildRoles = config.ROLES.LEVEL_ROLES;
     const targetRoleId = getTargetRoleId(currentLevel);
 
     if (!member.guild) return;
 
-    // Se l'utente non merita alcun ruolo di livello, assicurati di rimuovere tutti i ruoli di livello
-    if (!targetRoleId) {
-        for (const roleId of Object.values(guildRoles)) {
-            if (member.roles.cache.has(roleId)) {
-                await member.roles.remove(roleId).catch(err => console.error(`[XP ERROR] Errore rimozione ruolo ${roleId}: ${err.message}`));
-            }
+    // 1. Pulizia: Rimuovi tutti i ruoli di livello che non sono il ruolo target
+    for (const roleId of Object.values(guildRoles)) {
+        if (member.roles.cache.has(roleId) && roleId !== targetRoleId) {
+            await member.roles.remove(roleId).catch(err => console.error(`[XP ERROR] Errore rimozione ruolo ${roleId}: ${err.message}`));
+            const removedRole = member.guild.roles.cache.get(roleId)?.name;
+            const targetRole = member.guild.roles.cache.get(targetRoleId)?.name || "Nessun Grado";
+            console.log(`[XP] Rimosso il grado ${removedRole} da ${member.user.tag} (Grado Attuale: ${targetRole})`);
         }
-        return;
     }
 
-    // Processa la promozione/retrocessione
-    for (const [level, roleId] of Object.entries(guildRoles)) {
-        const role = member.guild.roles.cache.get(roleId);
-        if (!role) continue; // Salta se il ruolo non è nel server
-
-        if (roleId === targetRoleId) {
-            // PROMOZIONE: Aggiungi il ruolo bersaglio se non lo ha
-            if (!member.roles.cache.has(roleId)) {
-                await member.roles.add(roleId).catch(err => console.error(`[XP ERROR] Errore aggiunta ruolo ${roleId}: ${err.message}`));
-                console.log(`[XP] Promosso ${member.user.tag} al grado: ${role.name}`);
-                // [OPZIONALE: Invia messaggio di promozione se desiderato]
-            }
-        } else {
-            // RETROCESSIONE/PULIZIA: Rimuovi tutti gli altri ruoli di livello
-            if (member.roles.cache.has(roleId)) {
-                await member.roles.remove(roleId).catch(err => console.error(`[XP ERROR] Errore rimozione ruolo ${roleId}: ${err.message}`));
-                console.log(`[XP] Rimosso il grado ${role.name} da ${member.user.tag} (nuovo grado: ${member.guild.roles.cache.get(targetRoleId).name})`);
-            }
+    // 2. Promozione: Aggiungi il ruolo target se esiste e l'utente non lo ha
+    if (targetRoleId) {
+        if (!member.roles.cache.has(targetRoleId)) {
+            await member.roles.add(targetRoleId).catch(err => console.error(`[XP ERROR] Errore aggiunta ruolo ${targetRoleId}: ${err.message}`));
+            const roleName = member.guild.roles.cache.get(targetRoleId)?.name;
+            console.log(`[XP] Promosso ${member.user.tag} al grado: ${roleName}`);
+            // [OPZIONALE: Invia messaggio di promozione se desiderato]
         }
     }
 }
@@ -90,6 +79,7 @@ function updateMemberXp(member, xpAmount, client) {
     }
 
     let { xp, level } = levelsData[userId];
+    let originalLevel = level;
     
     // Aggiorna XP
     xp += xpAmount;
@@ -97,29 +87,48 @@ function updateMemberXp(member, xpAmount, client) {
     // Impedisci XP negativi
     if (xp < 0) xp = 0;
 
-    // Calcola il nuovo livello
-    let needsUpdate = false;
+    // --- Calcolo del nuovo livello ---
     let newLevel = level;
-    
-    // Controlla se l'utente è salito di livello
+
+    // A. Controlla salita di livello
     while (xp >= getNextLevelXp(newLevel)) {
         newLevel++;
-        needsUpdate = true;
     }
 
-    // Controlla se l'utente è sceso di livello (demotion di livello XP)
-    // Non è necessario un loop "while" qui, basta un ricalcolo basato sull'XP totale
-    // La logica di retrocessione è già coperta dal controllo del ruolo in checkAndSetRank.
+    // B. Controlla discesa di livello (per retrocessione)
+    // Se l'XP è sceso, dobbiamo ricalcolare il livello massimo raggiunto con quell'XP
+    if (xpAmount < 0) {
+        newLevel = 0;
+        let cumulativeXp = 0;
+        
+        while (true) {
+            const xpForNextLevel = getNextLevelXp(newLevel);
+            if (xp >= xpForNextLevel) {
+                newLevel++;
+                // Per un ricalcolo più preciso del livello, si dovrebbe usare la formula inversa o un loop
+                // Semplificazione: se l'XP è sceso sotto il requisito per il livello attuale, abbassa il livello.
+                // In questo caso, il loop while(xp >= getNextLevelXp(newLevel)) è sufficiente se si parte da newLevel=0
+                // Lo resetto e lo ricalcolo completamente:
+                newLevel = 0;
+                while (xp >= getNextLevelXp(newLevel)) {
+                     newLevel++;
+                }
+                break;
+            } else {
+                break;
+            }
+        }
+    }
     
-    // Se il livello è cambiato, o se l'XP è sceso/salito in modo significativo, controlla il ruolo
-    if (newLevel !== level || needsUpdate || xpAmount < 0) {
+    // Se il livello è cambiato, o se stiamo gestendo una sottrazione di XP, aggiorna i dati e il grado.
+    if (newLevel !== originalLevel || xpAmount < 0) {
         levelsData[userId] = { xp, level: newLevel };
         saveData(config.FILES.LEVELS, levelsData);
 
         // Chiama la funzione che gestisce la promozione/retrocessione del ruolo
-        checkAndSetRank(member, xp, newLevel, client);
+        checkAndSetRank(member, newLevel, client);
     } else {
-        levelsData[userId] = { xp, level };
+        levelsData[userId] = { xp, level: newLevel };
         saveData(config.FILES.LEVELS, levelsData);
     }
 }
@@ -136,6 +145,7 @@ function xpTickLoop(client) {
             const guild = client.guilds.cache.get(config.SERVER_ID);
             if (!guild) return;
 
+            // Fetch dei membri del server per verificare la presenza
             const members = await guild.members.fetch().catch(() => null);
             if (!members) return;
 
@@ -154,5 +164,5 @@ function xpTickLoop(client) {
 
 module.exports = {
     xpTickLoop,
-    updateMemberXp, // Utile per i comandi amministrativi come /addxp e /removexp
+    updateMemberXp,
 };
