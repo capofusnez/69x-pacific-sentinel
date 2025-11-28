@@ -1,0 +1,10 @@
+# .gitignore
+
+# Dependency directory
+/node_modules
+
+# Configuration files (NEVER commit your secrets!)
+.env
+
+# Runtime data (optional: if you want to keep data private)
+/data/
