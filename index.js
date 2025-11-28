@@ -8,7 +8,7 @@ const { updateAllCommands } = require('./handlers/commandHandler');
 const eventHandler = require('./handlers/eventHandler');
 const config = require('./config');
 const { AI_STATUS, askGemini, getAiUnavailableMessage } = require('./utils/gemini');
-
+const db = require('./utils/db');
 // Inizializzazione Dati (per evitare crash)
 getInitialData();
 
