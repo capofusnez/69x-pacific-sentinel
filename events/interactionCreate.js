@@ -1,7 +1,17 @@
-// events/interactionCreate.js (Estratto: Modifica il blocco di gestione dei comandi slash)
+// events/interactionCreate.js
 
-// ... (altre righe sopra)
+const { Events, ChannelType } = require("discord.js");
+const commandHandler = require("../handlers/commandHandler");
+const config = require("../config");
+const { getUserLevelInfo, updateRankRoles } = require("../utils/xpUtils");
+const { getData, saveData } = require("../utils/db");
+const { createTicketChannel, moveTicketToArchive } = require("../utils/serverUtils");
+const { askGemini, getAiUnavailableMessage } = require("../utils/gemini");
 
+module.exports = {
+    name: Events.InteractionCreate,
+    async execute(interaction, client) {
+        
         // Gestione Comandi Slash
         if (interaction.isChatInputCommand()) {
             const command = commandHandler.getCommands().get(interaction.commandName);
@@ -16,10 +26,11 @@
                 await command.execute(interaction, client);
                 
             } catch (error) {
-                // --- INIZIO GESTIONE AVVISO/ERRORE ---
+                // --- INIZIO GESTIONE AVVISO/ERRORE (Protezione da crash) ---
                 console.error(`💥 Errore nell'esecuzione del comando /${interaction.commandName}:`, error);
 
-                const adminUser = await client.users.fetch('IL_TUO_ID_UTENTE_DISCORD'); // <-- ⚠️ SOSTITUISCI CON IL TUO ID
+                // ⚠️ SOSTITUISCI QUESTO ID con il tuo ID Utente Discord per ricevere i DM di errore
+                const adminUser = await client.users.fetch('IL_TUO_ID_UTENTE_DISCORD').catch(() => null); 
                 
                 // 1. Notifica l'utente che il comando ha fallito (messaggio effimero)
                 const userErrorMsg = '⚠️ Si è verificato un errore eseguendo il comando! Lo staff è stato avvisato.';
@@ -43,4 +54,63 @@
             }
             return;
         }
-// ... (continua con la gestione dei pulsanti e del client.on)
+
+        // Gestione Pulsanti (Buttons)
+        if (interaction.isButton()) {
+            const [type, action, value] = interaction.customId.split("_");
+            const guild = interaction.guild;
+            const member = interaction.member;
+
+            if (type === "rules" && action === "accept") {
+                // LOGICA ACCETTAZIONE REGOLE
+                const rulesInfo = getData(config.FILES.RULES_MESSAGE);
+                if (interaction.message.id !== rulesInfo.messageId) return;
+
+                const role = guild.roles.cache.get(config.FRESH_SPAWN_ROLE_ID);
+                if (!role) {
+                    return interaction.reply({ content: "⚠ Ruolo Fresh Spawn non trovato. Contatta lo staff.", ephemeral: true });
+                }
+                
+                if (member.roles.cache.has(role.id)) {
+                    return interaction.reply({ content: "Hai già accettato le regole.", ephemeral: true });
+                }
+
+                await member.roles.add(role).catch(err => console.error("Errore assegnazione ruolo:", err));
+                await updateRankRoles(guild, member, 0); 
+
+                // --- LOGICA: NOTIFICA PUBBLICA NEL CANALE NUOVI UTENTI (Stile DayZ) ---
+                const newUserChannel = guild.channels.cache.get(config.NEW_USER_CHANNEL_ID);
+                
+                if (newUserChannel) {
+                    const notificationMessage = 
+                        `🚨 **Nuovo sopravvissuto è atterrato su Sakhal!**\n` +
+                        `Benvenuto ${member.user} su **${guild.name}** | Full PvP.\n` +
+                        `\n` +
+                        `🇬🇧 **New survivor just joined Sakhal!**\n` +
+                        `Welcome ${member.user} to **${guild.name}** | Full PvP.`;
+                    
+                    await newUserChannel.send(notificationMessage).catch(err => console.error("Errore invio notifica benvenuto:", err));
+                }
+                // --- FINE LOGICA ---
+                
+                await interaction.reply({ content: "✅ Regole accettate! Benvenuto su Sakhal. Ora puoi accedere agli altri canali.", ephemeral: true });
+                return;
+            }
+
+            if (type === "ticket" && action === "create") {
+                // LOGICA CREAZIONE TICKET
+                await interaction.deferReply({ ephemeral: true });
+                
+                try {
+                     const channel = await createTicketChannel(guild, interaction.user, value);
+                     await interaction.editReply({ content: `🎫 Il tuo ticket è stato creato: ${channel}` });
+                } catch(err) {
+                     console.error("Errore creazione ticket:", err);
+                     await interaction.editReply("⚠ Errore durante la creazione del ticket. Riprova più tardi.");
+                }
+                return;
+            }
+
+            if (type === "ticket" && action === "close") {
+                // LOGICA CHIUSURA TICKET
+                if (interaction.
