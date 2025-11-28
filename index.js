@@ -2,14 +2,16 @@
 
 require('dotenv').config();
 const { Client, GatewayIntentBits, ActivityType, Events, ChannelType } = require('discord.js');
+const path = require('path');
 const { xpTickLoop } = require('./utils/xpUtils');
 const { getInitialData, getData, saveData } = require('./utils/db'); 
 const { updateAllCommands } = require('./handlers/commandHandler');
+const commandHandler = require('./handlers/commandHandler');
 const eventHandler = require('./handlers/eventHandler');
 const config = require('./config');
 const { AI_STATUS, askGemini, getAiUnavailableMessage } = require('./utils/gemini');
 const db = require('./utils/db');
-const path = require('path');
+
 // Inizializzazione Dati (per evitare crash)
 db.getInitialData();
 
