@@ -44,8 +44,19 @@ module.exports = {
     // ------------------------------------------------------------
     // SISTEMA XP
     // ------------------------------------------------------------
-    XP_TICK_INTERVAL_MS: 5 * 60 * 1000, // ogni 5 minuti
-    XP_PER_TICK: 10,
+
+    // Intervallo di tempo tra un controllo XP e l'altro (in minuti)
+    XP_TICK_INTERVAL_MIN: 5, 
+    
+    XP_GAINS: {
+        // XP guadagnato ogni XP_TICK_INTERVAL_MIN se l'utente sta giocando a DayZ
+        DAYZ_PLAYING: 25, // <--- VALORE AGGIUNTO (era undefined)
+        // Altri XP di base (opzionale)
+        MESSAGE_SEND: 1,
+        // NOME DEL GIOCO DA CERCARE NELLO STATO DI DISCORD
+        GAME_NAME_TO_TRACK: 'DayZ', 
+    },
+    
     FRESH_SPAWN_ROLE_ID: "1442570652228784240", // Ruolo assegnato dopo l'accettazione delle regole
 
     RANK_ROLES: [
