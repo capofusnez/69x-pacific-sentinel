@@ -1,62 +1,90 @@
 // index.js
 
-require("dotenv").config();
-const { Client, GatewayIntentBits, Partials, ActivityType } = require("discord.js");
-const path = require("path");
-const os = require("os");
-const config = require("./config");
-const { loadAllData } = require("./utils/db");
-const commandHandler = require("./handlers/commandHandler");
-const eventHandler = require("./handlers/eventHandler");
+require('dotenv').config();
+const { Client, GatewayIntentBits, ActivityType, Events, ChannelType } = require('discord.js');
+const { xpTickLoop } = require('./utils/xpUtils');
+const { getInitialData, getData, saveData } = require('./utils/db');
+const { updateAllCommands } = require('./handlers/commandHandler');
+const eventHandler = require('./handlers/eventHandler');
+const config = require('./config');
+const { AI_STATUS, askGemini, getAiUnavailableMessage } = require('./utils/gemini');
 
-// ------------------------------------------------------------
-// CLIENT DISCORD
-// ------------------------------------------------------------
+// Inizializzazione Dati (per evitare crash)
+getInitialData();
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMembers, // Richiesto per gestione ruoli e membri
+        GatewayIntentBits.GuildPresences, // Richiesto per tracciare lo stato di gioco (DayZ)
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildPresences
+        GatewayIntentBits.MessageContent, // Richiesto per leggere i messaggi nella chat AI
     ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-// ------------------------------------------------------------
-// INIZIALIZZAZIONE
-// ------------------------------------------------------------
-
-async function startBot() {
-    console.log(`\n--- V 1.7 beta - 69x Pacific AI Unit - Node ${process.version} ---`);
-    console.log(`Hostname: ${os.hostname()}`);
-    
-    // 1. Carica i dati (configurazioni/livelli, ecc.)
-    await loadAllData();
-    
-    // 2. Carica i comandi e gli eventi
-    commandHandler.loadCommands(path.join(__dirname, "commands"));
-    eventHandler.loadEvents(client, path.join(__dirname, "events"));
-
-    // 3. Login
-    await client.login(config.BOT_TOKEN);
-}
-
-// ------------------------------------------------------------
-// HELPER: rileva se sta giocando a DayZ (necessario per XP loop)
-// ------------------------------------------------------------
-
+// Aggiungi la funzione al client per l'uso in xpUtils (xpTickLoop)
 client.isPlayingDayZ = (member) => {
-    const presence = member?.presence;
-    if (!presence || !presence.activities || presence.activities.length === 0) {
-        return false;
-    }
-    return presence.activities.some(a =>
-        a.type === ActivityType.Playing &&
-        a.name &&
-        a.name.toLowerCase().includes("dayz")
+    if (!member.presence || !member.presence.activities) return false;
+    return member.presence.activities.some(
+        activity => activity.type === ActivityType.Playing && activity.name.toLowerCase() === config.DAYZ_GAME_NAME.toLowerCase()
     );
-}
+};
 
-startBot();
+// --------------------------------------------------------
+// GESTIONE EVENTI E COMANDI (Handler)
+// --------------------------------------------------------
+
+eventHandler.loadEvents(client);
+updateAllCommands(client);
+
+// --------------------------------------------------------
+// GESTIONE CHAT AI (Listener MessageCreate)
+// *Spostato qui per risolvere ReferenceError*
+// --------------------------------------------------------
+
+client.on(Events.MessageCreate, async message => {
+    if (message.author.bot || message.channel.type !== ChannelType.GuildText) return;
+    
+    const aiSessions = getData(config.FILES.AI_SESSIONS);
+    
+    // Controlla se il messaggio proviene da un canale AI attivo e dall'utente corretto
+    if (aiSessions[message.channelId] && message.author.id === aiSessions[message.channelId].userId) {
+        
+        // AGGIORNA ATTIVITÀ AI per prevenire la cancellazione del canale
+        aiSessions[message.channelId].lastActivity = Date.now();
+        saveData(config.FILES.AI_SESSIONS, aiSessions);
+        
+        if (!AI_STATUS.available) {
+             return message.reply(getAiUnavailableMessage());
+        }
+
+        // INVIA A GEMINI
+        await message.channel.sendTyping();
+        try {
+            const answer = await askGemini(message.content);
+            await message.reply(answer);
+        } catch (err) {
+            console.error("Errore Gemini in sessione AI:", err);
+            // Invia una risposta utile anche in caso di errore
+            await message.reply("⚠ Errore comunicando con l'AI. Riprova tra qualche minuto.");
+        }
+    }
+});
+
+
+// --------------------------------------------------------
+// LOGIN E AVVIO
+// --------------------------------------------------------
+
+client.once(Events.ClientReady, c => {
+    console.log(`✅ Bot ${c.user.tag} ONLINE!`);
+    
+    // Avvia il loop XP solo dopo che il bot è pronto
+    xpTickLoop(client); 
+    
+    // Imposta lo stato "Watching DayZ"
+    c.user.setActivity(config.DAYZ_GAME_NAME, { type: ActivityType.Watching });
+});
+
+
+client.login(process.env.DISCORD_TOKEN);
