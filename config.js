@@ -15,7 +15,7 @@ module.exports = {
     // CANALI E CATEGORIE
     // ------------------------------------------------------------
     RULES_CHANNEL_ID: process.env.RULES_CHANNEL_ID || "1442141514464759868",
-    RULES_CHANNEL_NAME: "📜│rules",
+    RULES_CHANNEL_NAME: "📜┃regole・rules",
     NEW_USER_CHANNEL_ID: process.env.WELCOME_CHANNEL_ID || "1442568117296562266", 
     
     SUPPORT_CATEGORY_NAME: "🆘 Supporto • Support",
