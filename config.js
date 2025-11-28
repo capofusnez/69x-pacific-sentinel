@@ -63,4 +63,36 @@ module.exports = {
     // Lista dei ruoli per il sistema di livelli
     RANK_ROLES: [
         { level: 0,  name: "Fresh Spawn",   roleId: "1442570652228784240" },
-        { level: 1,  name: "Survivor",      roleId: "1442
+        { level: 1,  name: "Survivor",      roleId: "1442570651696107711" },
+        { level: 5,  name: "Veteran Raider", roleId: "1442570650584875019" },
+        { level: 10, name: "Field Officer", roleId: "1442570649724784671" },
+        { level: 15, name: "Command Unit",   roleId: "1442570648705568798" },
+        { level: 20, name: "Overlord",      roleId: "1442570648022024292" }
+    ],
+
+    // ------------------------------------------------------------
+    // TICKET
+    // ------------------------------------------------------------
+    TICKET_TYPES: {
+        general: {
+            label: "💼 Supporto Generale",
+            category: 'YOUR_GENERAL_TICKET_CATEGORY_ID',
+            style: ButtonStyle.Secondary
+        },
+        bug: {
+            label: "⚙️ Segnalazione Bug",
+            category: 'YOUR_BUG_TICKET_CATEGORY_ID',
+            style: ButtonStyle.Danger // Rosso
+        },
+        report: {
+            label: "🚨 Segnalazione Utente",
+            category: 'YOUR_REPORT_TICKET_CATEGORY_ID',
+            style: ButtonStyle.Danger
+        },
+        suggestions: {
+            label: "💡 Suggerimento/Idea",
+            category: 'YOUR_SUGGESTION_CATEGORY_ID',
+            style: ButtonStyle.Success // Verde
+        }
+    },
+}; // <-- CHIUDE L'OGGETTO module.exports
