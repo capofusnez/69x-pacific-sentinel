@@ -56,8 +56,23 @@ module.exports = {
 
                 await member.roles.add(role).catch(err => console.error("Errore assegnazione ruolo:", err));
                 await updateRankRoles(guild, member, 0); 
+
+                // --- NUOVA LOGICA: NOTIFICA PUBBLICA NEL CANALE NUOVI UTENTI (Richiesto dall'utente) ---
+                const newUserChannel = guild.channels.cache.get(config.NEW_USER_CHANNEL_ID);
                 
-                await interaction.reply({ content: "✅ Regole accettate! Benvenuto su Sakhal.", ephemeral: true });
+                if (newUserChannel) {
+                    const notificationMessage = 
+                        `🚨 **Nuovo sopravvissuto è atterrato su Sakhal!**\n` +
+                        `Benvenuto ${member.user} su **${guild.name}** | Full PvP.\n` +
+                        `\n` +
+                        `🇬🇧 **New survivor just joined Sakhal!**\n` +
+                        `Welcome ${member.user} to **${guild.name}** | Full PvP.`;
+                    
+                    await newUserChannel.send(notificationMessage).catch(err => console.error("Errore invio notifica benvenuto:", err));
+                }
+                // --- FINE NUOVA LOGICA ---
+                
+                await interaction.reply({ content: "✅ Regole accettate! Benvenuto su Sakhal. Ora puoi accedere agli altri canali.", ephemeral: true });
                 return;
             }
 
