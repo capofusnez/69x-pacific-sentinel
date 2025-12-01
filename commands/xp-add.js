@@ -1,51 +1,57 @@
 // commands/xp-add.js
 
-const { SlashCommandBuilder } = require("discord.js");
-const { addXP, getUserLevelInfo, updateRankRoles } = require("../utils/xpUtils");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { getPermissions } = require("../utils/serverUtils");
+const { addXP } = require('../utils/xpUtils'); // <-- IMPORTAZIONE CORRETTA
+
+// Usiamo la flag numerica per Ephemeral
+const EPHEMERAL_FLAG = 64; 
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("xp-add")
-        .setDescription("✨ [ADMIN] Aggiunge o sottrae XP a un utente.")
-        .addUserOption(option =>
-            option.setName("utente")
-                .setDescription("L'utente a cui dare/togliere XP.")
+        .setDescription("➕ [ADMIN] Aggiunge XP a un utente specifico.")
+        .addUserOption(option => 
+            option.setName('target')
+                .setDescription('L\'utente a cui aggiungere XP.')
                 .setRequired(true))
         .addIntegerOption(option =>
-            option.setName("quantita")
-                .setDescription("La quantità di XP da aggiungere (es. 100) o togliere (es. -50).")
+            option.setName('amount')
+                .setDescription('La quantità di XP da aggiungere.')
                 .setRequired(true))
         .setDefaultMemberPermissions(0),
 
     async execute(interaction) {
         const { allowedRoles } = getPermissions();
         
+        // 1. Controllo Permessi
         if (!interaction.member.permissions.has("Administrator") && !interaction.member.roles.cache.some(role => allowedRoles.includes(role.id))) {
-            return interaction.reply({ content: "Non hai il permesso di usare questo comando.", ephemeral: true });
+            return interaction.reply({ 
+                content: "Non hai il permesso di usare questo comando.", 
+                flags: EPHEMERAL_FLAG
+            });
         }
 
-        const user = interaction.options.getUser("utente");
-        const amount = interaction.options.getInteger("quantita");
-        const guild = interaction.guild;
+        const targetUser = interaction.options.getUser('target');
+        const amount = interaction.options.getInteger('amount');
+        const guildId = interaction.guildId;
 
-        if (user.bot) {
-            return interaction.reply({ content: "Non puoi modificare l'XP di un bot.", ephemeral: true });
-        }
-        
-        const member = await guild.members.fetch(user.id);
-        const result = addXP(guild.id, user.id, amount);
-        const oldLevel = getUserLevelInfo(guild.id, user.id).level;
+        // 2. Aggiungi XP
+        const newStats = addXP(targetUser.id, amount, guildId);
 
-        let replyMessage = `✅ Modificato XP di ${user.tag} di **${amount}**. `;
+        // 3. Risposta
+        const responseEmbed = new EmbedBuilder()
+            .setTitle("➕ XP Aggiunti!")
+            .setDescription(`Aggiunti **${amount} XP** a **${targetUser.username}**.`)
+            .addFields(
+                { name: 'Livello Attuale', value: `${newStats.level}`, inline: true },
+                { name: 'XP Totali', value: `${newStats.xp}`, inline: true }
+            )
+            .setColor("#00FF00");
 
-        if (result.leveledUp || result.newLevel < oldLevel) {
-            replyMessage += `**Nuovo Livello: ${result.newLevel}**`;
-            await updateRankRoles(guild, member, result.newLevel);
-        } else {
-             replyMessage += `XP Totali: ${result.xp}. Livello: ${oldLevel}`;
-        }
-        
-        await interaction.reply({ content: replyMessage, ephemeral: true });
+        await interaction.reply({ 
+            embeds: [responseEmbed],
+            flags: EPHEMERAL_FLAG
+        });
     },
 };
