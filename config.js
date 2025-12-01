@@ -40,7 +40,7 @@ module.exports = {
     // ------------------------------------------------------------
     // CONFIGURAZIONE SISTEMA TICKET (Placeholder)
     // ------------------------------------------------------------
-    TICKET_CATEGORY_ID: "INSERISCI_ID_CATEGORIA_TICKET", 
+    TICKET_CATEGORY_ID: "1442842746032230410", 
     TICKET_TYPES: {
         // 1. Supporto Generale / General Support
         'support': { label: 'Richiesta di Supporto / General Support', emoji: '❓' },
