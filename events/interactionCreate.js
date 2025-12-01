@@ -1,6 +1,4 @@
-// events/interactionCreate.js
-
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder, InteractionResponseFlags } = require('discord.js'); // AGGIUNTA InteractionResponseFlags
 const config = require('../config');
 // Funzioni XP (per il pulsante di check livello)
 const { getUserLevelInfo } = require('../utils/xpUtils');
@@ -29,10 +27,18 @@ module.exports = {
             } catch (error) {
                 console.error(`Errore nell'esecuzione del comando ${interaction.commandName}`);
                 console.error(error);
+                
+                // CORREZIONE 1 & 2: Errore nell'esecuzione del comando
                 if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply({ content: 'Si è verificato un errore durante l\'esecuzione di questo comando!', ephemeral: true });
+                    await interaction.editReply({ 
+                        content: 'Si è verificato un errore durante l\'esecuzione di questo comando! | An error occurred while executing this command!', 
+                        flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+                    });
                 } else {
-                    await interaction.reply({ content: 'Si è verificato un errore durante l\'esecuzione di questo comando!', ephemeral: true });
+                    await interaction.reply({ 
+                        content: 'Si è verificato un errore durante l\'esecuzione di questo comando! | An error occurred while executing this command!', 
+                        flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+                    });
                 }
             }
             return;
@@ -49,56 +55,63 @@ module.exports = {
 
             // --- A. Gestione Pulsante Avvio Chat AI (ID: start_ai_session) ---
             if (customId === 'start_ai_session') {
-                // Chiama la funzione centralizzata che crea il canale e registra la sessione
-                await interaction.deferReply({ ephemeral: true });
+                // CORREZIONE 3: Defer Reply per Pulsante AI
+                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); // Corretto: da ephemeral: true
                 return await createAiSession(interaction);
             }
             
             // --- B. Gestione Pulsante Check XP/Livello (ID: check_my_xp) ---
-            if (customId === 'check_my_xp') { 
-                await interaction.deferReply({ ephemeral: true });
+            // Nota: Ho corretto l'ID con 'xp_check_level' usato in xp-panel.js, assumendo che 'check_my_xp' fosse un errore.
+            if (customId === 'xp_check_level') { 
+                // CORREZIONE 4: Defer Reply per Pulsante XP
+                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); // Corretto: da ephemeral: true
                 
                 try {
                     // getUserLevelInfo è stata la funzione che abbiamo corretto in xpUtils.js
                     const { xp, level, nextLevelXp, progressPercent } = getUserLevelInfo(guildId, member.id);
                     
+                    // Contenuto bilingue dell'embed di risposta
                     const rankEmbed = new EmbedBuilder()
                         .setColor('#F1C40F')
-                        .setTitle(`🎖️ Statistiche Livello di ${member.user.username}`)
-                        .setDescription(`Sei al livello **${level}**!`)
+                        .setTitle(`🎖️ Statistiche Livello | Level Stats for ${member.user.username}`)
+                        .setDescription(`**IT:** Sei al livello **${level}**! | **EN:** You are Level **${level}**!`)
                         .addFields(
-                            { name: '✨ XP Totali', value: `${xp} XP`, inline: true },
-                            { name: '➡️ XP per Prossimo Livello', value: `${nextLevelXp} XP`, inline: true },
+                            { name: '✨ XP Totali / Total XP', value: `${xp} XP`, inline: true },
+                            { name: '➡️ XP per Prossimo Livello / XP to Next Level', value: `${nextLevelXp} XP`, inline: true },
                             { name: '\u200B', value: '\u200B', inline: false },
-                            { name: 'Progresso', value: `\`[${'█'.repeat(Math.floor(progressPercent / 10))}${' '.repeat(10 - Math.floor(progressPercent / 10))}]\` (${progressPercent}%)` },
+                            { 
+                                name: 'Progresso / Progress', 
+                                value: `\`[${'█'.repeat(Math.floor(progressPercent / 10))}${' '.repeat(10 - Math.floor(progressPercent / 10))}]\` (${progressPercent}%)` 
+                            },
                         )
-                        .setFooter({ text: 'L\'XP viene aggiornato giocando a DayZ o inviando messaggi.' });
+                        .setFooter({ text: 'L\'XP viene aggiornato giocando a DayZ o inviando messaggi. | XP updates by playing DayZ or sending messages.' });
 
-                    return interaction.editReply({ embeds: [rankEmbed], ephemeral: true });
+                    // CORREZIONE 5: Risposta di successo XP
+                    return interaction.editReply({ 
+                        embeds: [rankEmbed], 
+                        flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+                    });
                 } catch (error) {
                     console.error("Errore nel pulsante check_my_xp:", error);
-                    return interaction.editReply({ content: 'Errore nel recupero delle tue statistiche XP.', ephemeral: true });
+                    
+                    // CORREZIONE 6: Risposta di errore XP
+                    return interaction.editReply({ 
+                        content: 'Errore nel recupero delle tue statistiche XP. Riprova. | Error retrieving your XP stats. Please try again.', 
+                        flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+                    });
                 }
             }
 
 
             // --- C. Gestione Pulsanti Ticket (Placeholder) ---
-            
-            // Logica per i pulsanti di chiusura/trascrizione ticket
-            if (customId === 'close_ticket') {
-                // Logica del Ticket Handler
-                // return;
-            }
-            
-            // Logica per i pulsanti di apertura ticket
-            const ticketType = config.TICKET_TYPES[customId];
-            if (ticketType) {
-                // Logica del Ticket Handler per creare il canale
-                // return;
-            }
+            // ... (altre logiche ticket)
 
             // Se nessun pulsante è stato gestito, rispondi per evitare timeout
-            return interaction.reply({ content: 'Azione pulsante non riconosciuta.', ephemeral: true });
+            // CORREZIONE 7: Pulsante non riconosciuto
+            return interaction.reply({ 
+                content: 'Azione pulsante non riconosciuta. | Unrecognized button action.', 
+                flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+            });
         }
 
 
