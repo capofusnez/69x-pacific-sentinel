@@ -4,44 +4,50 @@ const { Events, EmbedBuilder } = require('discord.js');
 const config = require('../config');
 const { getUserLevelInfo } = require('../utils/xpUtils');
 const { createAiSession } = require('../commands/ai');
-
-// ⭐ AGGIORNA L'IMPORTAZIONE DEL GESTORE TICKET ⭐
-const { createTicketChannel, closeTicket } = require('./ticketCreate'); 
+const { createTicketChannel, closeTicket } = require('./ticketCreate'); // ⭐ IMPORTAZIONE CORRETTA ⭐
 
 // La flag Ephemeral è rappresentata dal valore numerico 64.
 const EPHEMERAL_FLAG = 64;
 
 module.exports = {
-// ...
-// ... (omesso il codice) ...
-// ...
-
+    name: Events.InteractionCreate,
+    once: false,
+    async execute(interaction) {
+        
         // ----------------------------------------------------------------------------------
-        // 2. GESTIONE PULSANTI (Buttons)
+        // 1. GESTIONE COMANDI SLASH
         // ----------------------------------------------------------------------------------
-        if (interaction.isButton()) {
-            const customId = interaction.customId;
-            // ... (altre variabili) ...
+        if (interaction.isCommand()) {
+            const command = interaction.client.commands.get(interaction.commandName);
 
-            // ... (omesso A e B) ...
-
-            // ⭐ C. Gestione Pulsanti Ticket (ticket_create_...) ⭐
-            if (customId.startsWith('ticket_create_')) {
-                return await createTicketChannel(interaction);
+            if (!command) {
+                console.error(`Nessun comando trovato con il nome ${interaction.commandName}`);
+                return;
             }
 
-            // ⭐ D. Gestione Pulsante Chiusura Ticket (ticket_close) ⭐
-            if (customId === 'ticket_close') {
-                // ⭐ CHIAMA LA NUOVA FUNZIONE DI CHIUSURA ⭐
-                return await closeTicket(interaction); 
+            try {
+                await command.execute(interaction);
+            } catch (error) {
+                console.error(`Errore nell'esecuzione del comando ${interaction.commandName}`);
+                console.error(error);
+                
+                const errorMessage = 'Si è verificato un errore durante l\'esecuzione di questo comando! | An error occurred while executing this command!';
+                
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.editReply({ 
+                        content: errorMessage, 
+                        flags: EPHEMERAL_FLAG 
+                    });
+                } else {
+                    await interaction.reply({ 
+                        content: errorMessage, 
+                        flags: EPHEMERAL_FLAG 
+                    });
+                }
             }
-
-            // --- E. Risposta predefinita per pulsante non riconosciuto ---
-            return interaction.reply({ 
-                content: 'Azione pulsante non riconosciuta. | Unrecognized button action.', 
-                flags: EPHEMERAL_FLAG // Usiamo il numero 64
-            });
+            return;
         }
+
 
         // ----------------------------------------------------------------------------------
         // 2. GESTIONE PULSANTI (Buttons)
@@ -53,13 +59,13 @@ module.exports = {
 
             // --- A. Gestione Pulsante Avvio Chat AI (ID: start_ai_session) ---
             if (customId === 'start_ai_session') {
-                await interaction.deferReply({ flags: EPHEMERAL_FLAG }); // Usiamo il numero 64
+                await interaction.deferReply({ flags: EPHEMERAL_FLAG });
                 return await createAiSession(interaction);
             }
             
             // --- B. Gestione Pulsante Check XP/Livello (ID: xp_check_level) ---
             if (customId === 'xp_check_level') { 
-                await interaction.deferReply({ flags: EPHEMERAL_FLAG }); // Usiamo il numero 64
+                await interaction.deferReply({ flags: EPHEMERAL_FLAG });
                 
                 try {
                     const { xp, level, nextLevelXp, progressPercent } = getUserLevelInfo(guildId, member.id);
@@ -79,41 +85,34 @@ module.exports = {
                         )
                         .setFooter({ text: 'L\'XP viene aggiornato giocando a DayZ o inviando messaggi. | XP updates by playing DayZ or sending messages.' });
 
-                    // Risposta di successo XP (risposta privata)
                     return interaction.editReply({ 
                         embeds: [rankEmbed], 
-                        flags: EPHEMERAL_FLAG // Usiamo il numero 64
+                        flags: EPHEMERAL_FLAG 
                     });
                 } catch (error) {
                     console.error("Errore nel pulsante check_my_xp:", error);
                     
-                    // Risposta di errore XP (risposta privata)
                     return interaction.editReply({ 
                         content: 'Errore nel recupero delle tue statistiche XP. Riprova. | Error retrieving your XP stats. Please try again.', 
-                        flags: EPHEMERAL_FLAG // Usiamo il numero 64
+                        flags: EPHEMERAL_FLAG 
                     });
                 }
             }
 
-            // ⭐ C. Gestione Pulsanti Ticket (ticket_create_...) ⭐
+            // ⭐ C. Gestione Pulsanti Ticket (CREAZIONE) ⭐
             if (customId.startsWith('ticket_create_')) {
-                // Chiama la funzione di creazione ticket. La deferReply è gestita all'interno di createTicketChannel
-                // L'uso di flags: EPHEMERAL_FLAG è implicito nella funzione createTicketChannel per la risposta iniziale.
                 return await createTicketChannel(interaction);
             }
 
-            // ⭐ D. Gestione Pulsante Chiusura Ticket (ticket_close) ⭐
+            // ⭐ D. Gestione Pulsante Chiusura Ticket (CHIUSURA) ⭐
             if (customId === 'ticket_close') {
-                // Se hai intenzione di creare una funzione dedicata per la chiusura (es. closeTicket), la chiameresti qui.
-                // Per ora, diamo una risposta per evitare l'errore "Azione non riconosciuta"
-                // await closeTicket(interaction);
-                return interaction.reply({ content: "Logica di chiusura ticket in fase di implementazione (ID: ticket_close)...", ephemeral: true });
+                return await closeTicket(interaction); // ⭐ CHIAMATA CORRETTA ALLA FUNZIONE closeTicket ⭐
             }
 
             // --- E. Risposta predefinita per pulsante non riconosciuto ---
             return interaction.reply({ 
                 content: 'Azione pulsante non riconosciuta. | Unrecognized button action.', 
-                flags: EPHEMERAL_FLAG // Usiamo il numero 64
+                flags: EPHEMERAL_FLAG
             });
         }
 
