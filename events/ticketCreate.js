@@ -9,7 +9,13 @@ const {
 } = require('discord.js');
 const config = require('../config');
 
-// Funzione principale per creare il ticket
+// ID della categoria di archivio specificata dall'utente
+const ARCHIVE_CATEGORY_ID = "1443351281145086144"; 
+
+// ====================================================================
+// FUNZIONE PER LA CREAZIONE DEL TICKET
+// ====================================================================
+
 async function createTicketChannel(interaction) {
     const typeKey = interaction.customId.split('_').pop(); 
     const typeInfo = config.TICKET_TYPES[typeKey];
@@ -21,7 +27,7 @@ async function createTicketChannel(interaction) {
         });
     }
 
-    // Controlla se l'utente ha già un ticket aperto (facoltativo, ma impedisce spam di canali)
+    // Controlla se l'utente ha già un ticket aperto
     const existingTicket = interaction.guild.channels.cache.find(
         c => c.name.startsWith(`ticket-${interaction.user.username.toLowerCase()}`) && c.parentId === config.TICKET_CATEGORY_ID
     );
@@ -32,13 +38,11 @@ async function createTicketChannel(interaction) {
         });
     }
 
-    // --- 1. Definizione dei Permessi ---
+    // --- 1. Definizione dei Permessi (Filtro Ruoli Staff Robusti) ---
     const allStaffIds = [...config.ADMIN_ROLES, ...config.MODERATOR_ROLES];
     
-    // FILTRO: Accetta solo ID validi che sono ruoli esistenti nella cache della gilda
     const validStaffRoleIds = allStaffIds.filter(id => {
-        if (typeof id !== 'string') return false; 
-        if (!id.match(/^\d+$/)) return false; 
+        if (typeof id !== 'string' || !id.match(/^\d+$/)) return false; 
         return interaction.guild.roles.cache.has(id);
     });
     
@@ -81,7 +85,7 @@ async function createTicketChannel(interaction) {
             type: ChannelType.GuildText,
             parent: config.TICKET_CATEGORY_ID, 
             permissionOverwrites: permissionOverwrites,
-            topic: `Ticket aperto da ${interaction.user.tag} (${interaction.user.id}) per ${typeInfo.label}.`
+            topic: `Ticket aperto da ${interaction.user.tag} (${interaction.user.id}) per ${typeInfo.label}.` // Topic cruciale per la chiusura
         });
 
         await interaction.reply({ 
@@ -121,14 +125,17 @@ async function createTicketChannel(interaction) {
     }
 }
 
+// ====================================================================
+// FUNZIONE PER L'ARCHIVIAZIONE (CHIUSURA) DEL TICKET
+// ====================================================================
 
-// FUNZIONE PER LA CHIUSURA DEL TICKET
 async function closeTicket(interaction) {
+    const channel = interaction.channel;
     
-    // Controlla se il canale è un ticket (controllo meno rigido per evitare errori)
-    if (!interaction.channel.name.startsWith('ticket-')) {
+    // Controllo base
+    if (!channel.name.startsWith('ticket-')) {
         return interaction.reply({ 
-            content: "Questo pulsante non è valido qui.", 
+            content: "Questo pulsante non è valido qui, non è un canale ticket attivo.", 
             ephemeral: true 
         });
     }
@@ -136,27 +143,60 @@ async function closeTicket(interaction) {
     await interaction.deferReply(); 
 
     try {
-        // Rimuovi i componenti (i pulsanti) per prevenire ulteriori azioni
-        await interaction.editReply({
-            content: `🔒 **Ticket Chiuso!** Questo canale verrà eliminato tra 5 secondi. | **Ticket Closed!** This channel will be deleted in 5 seconds.`,
-            embeds: [],
-            components: []
+        // --- 1. Trova l'utente che ha aperto il ticket dal Topic ---
+        const userIdMatch = channel.topic ? channel.topic.match(/\((\d+)\)/) : null;
+        const userId = userIdMatch ? userIdMatch[1] : null;
+
+        // --- 2. Rinominazione e Spostamento ---
+        const newName = channel.name.replace('ticket-', 'closed-');
+        
+        await channel.edit({
+            name: newName,
+            parent: ARCHIVE_CATEGORY_ID, // ⭐ Sposta nella categoria di archivio
+            lockPermissions: false, // Necessario per modificare i permessi
         });
 
-        // Elimina il canale dopo un breve ritardo
-        setTimeout(async () => {
-            await interaction.channel.delete('Ticket chiuso dall\'utente o dallo staff.');
-        }, 5000); 
+        // --- 3. Rimozione Permessi Utente ---
+        let removeAccessMessage = "";
+
+        if (userId) {
+            await channel.permissionOverwrites.edit(userId, {
+                ViewChannel: false, // L'utente non può più vedere il canale
+                SendMessages: false,
+            });
+            removeAccessMessage = `Accesso rimosso per l'utente <@${userId}>. | Access removed for the user.`;
+        } else {
+             removeAccessMessage = `⚠️ **ATTENZIONE:** Non è stato possibile identificare l'utente che ha aperto il ticket. Lo staff deve verificare manualmente i permessi.`;
+        }
+
+        // --- 4. Messaggio Finale e Conferma ---
+        await channel.send(
+            `\n=================================\n` +
+            `🔒 **TICKET ARCHIVIATO** da ${interaction.user}.\n` +
+            `**Motivazione:** Discussione conclusa o risolta.\n` +
+            `${removeAccessMessage}\n` +
+            `=================================`
+        );
+        
+        await interaction.editReply({
+            content: `✅ **Ticket Archiviato!** Il canale è stato spostato e archiviato in <#${ARCHIVE_CATEGORY_ID}>.`,
+            components: [], // Rimuove il pulsante "Chiudi Ticket"
+        });
+
 
     } catch (error) {
-        console.error("❌ Errore nella chiusura del ticket:", error);
+        console.error("❌ Errore nell'archiviazione del ticket:", error);
         await interaction.editReply({
-            content: "Si è verificato un errore durante la chiusura del ticket. Assicurati che il BOT abbia i permessi di `Manage Channels`.",
+            content: "Si è verificato un errore durante l'archiviazione del ticket. Assicurati che il BOT abbia i permessi di `Manage Channels` sia nella categoria di origine che in quella di archivio (`" + ARCHIVE_CATEGORY_ID + "`).",
         });
     }
 }
 
+// ====================================================================
+// ESPORTAZIONE
+// ====================================================================
+
 module.exports = {
     createTicketChannel,
-    closeTicket // ESPORTIAMO LA FUNZIONE
+    closeTicket
 };
