@@ -42,8 +42,17 @@ module.exports = {
     // ------------------------------------------------------------
     TICKET_CATEGORY_ID: "INSERISCI_ID_CATEGORIA_TICKET", 
     TICKET_TYPES: {
-        'support': { label: 'Richiesta di Supporto', emoji: '❓' },
-        'report': { label: 'Segnala un Utente/Bug', emoji: '🚨' },
+        // 1. Supporto Generale / General Support
+        'support': { label: 'Richiesta di Supporto / General Support', emoji: '❓' },
+        
+        // 2. Segnalazione Utente / User Report
+        'report': { label: 'Segnala un Utente / User Report', emoji: '🚨' },
+        
+        // ⭐ 3. Segnalazione Bug / Bug Report (NUOVO) ⭐
+        'bug': { label: 'Segnalazione Bug / Bug Report', emoji: '🐛' },
+        
+        // ⭐ 4. Richiesta di Sban / Ban Appeal (NUOVO) ⭐
+        'ban_appeal': { label: 'Richiesta di Sban / Ban Appeal', emoji: '⚖️' },
     },
 
     // ------------------------------------------------------------
