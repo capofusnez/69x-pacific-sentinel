@@ -9,7 +9,7 @@ const {
 } = require('discord.js');
 const config = require('../config');
 
-// Funzione principale per creare il ticket
+// Funzione principale per creare il ticket (Lasciata invariata)
 async function createTicketChannel(interaction) {
     const typeKey = interaction.customId.split('_').pop(); 
     const typeInfo = config.TICKET_TYPES[typeKey];
@@ -21,7 +21,6 @@ async function createTicketChannel(interaction) {
         });
     }
 
-    // Controlla se l'utente ha già un ticket aperto (facoltativo, ma impedisce spam di canali)
     const existingTicket = interaction.guild.channels.cache.find(
         c => c.name.startsWith(`ticket-${interaction.user.username.toLowerCase()}`) && c.parentId === config.TICKET_CATEGORY_ID
     );
@@ -32,24 +31,15 @@ async function createTicketChannel(interaction) {
         });
     }
 
-    // --- 1. Definizione dei Permessi (RISOLUZIONE ERRORE InvalidType) ---
-    
-    // Raccoglie tutti gli ID di staff in un'unica lista
+    // --- 1. Definizione dei Permessi ---
     const allStaffIds = [...config.ADMIN_ROLES, ...config.MODERATOR_ROLES];
     
-    // ⭐ FILTRO CRUCIALE: Accetta solo ID validi che sono ruoli esistenti nella cache della gilda ⭐
     const validStaffRoleIds = allStaffIds.filter(id => {
-        // 1. Deve essere una stringa
         if (typeof id !== 'string') return false; 
-        // 2. Deve essere composto solo da numeri (ID valido)
         if (!id.match(/^\d+$/)) return false; 
-        // 3. Il ruolo deve esistere nella cache della Gilda
         return interaction.guild.roles.cache.has(id);
     });
-    
-    console.log(`[DEBUG TICKET] Ruoli Staff validi trovati: ${validStaffRoleIds.length}`);
 
-    // Mappa gli ID validi in oggetti PermissionOverwrites
     const staffPermissions = validStaffRoleIds.map(id => ({
         id: id,
         allow: [
@@ -59,14 +49,11 @@ async function createTicketChannel(interaction) {
         ],
     }));
 
-    // Permessi base per il canale
     const permissionOverwrites = [
-        // Permessi per il BOT
         {
             id: interaction.client.user.id,
             allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.ManageChannels]
         },
-        // Permessi per l'utente che ha aperto il ticket
         {
             id: interaction.user.id,
             allow: [
@@ -75,13 +62,11 @@ async function createTicketChannel(interaction) {
                 PermissionsBitField.Flags.ReadMessageHistory
             ],
         },
-        // Permessi per tutti (devono negare l'accesso)
         {
-            // ⭐ USARE interaction.guild.roles.everyone È IL METODO PIÙ AFFIDABILE ⭐
             id: interaction.guild.roles.everyone,
             deny: [PermissionsBitField.Flags.ViewChannel],
         },
-        ...staffPermissions // Permessi per gli Staff/Admin validi
+        ...staffPermissions 
     ];
     
     // --- 2. Creazione del Canale ---
@@ -94,13 +79,12 @@ async function createTicketChannel(interaction) {
             topic: `Ticket aperto da ${interaction.user.tag} (${interaction.user.id}) per ${typeInfo.label}.`
         });
 
-        // Conferma all'utente
         await interaction.reply({ 
             content: `✅ Il tuo ticket (${typeInfo.label}) è stato creato in ${ticketChannel}`, 
             ephemeral: true 
         });
         
-        // --- 3. Messaggio di Benvenuto nel Canale ---
+        // --- 3. Messaggio di Benvenuto ---
         const welcomeEmbed = new EmbedBuilder()
             .setTitle(`🎫 Ticket Aperto: ${typeInfo.label}`)
             .setDescription(
@@ -132,6 +116,44 @@ async function createTicketChannel(interaction) {
     }
 }
 
+
+// ⭐ NUOVA FUNZIONE PER LA CHIUSURA DEL TICKET ⭐
+async function closeTicket(interaction) {
+    // Controlla se l'interazione è in un canale ticket
+    if (interaction.channel.parentId !== config.TICKET_CATEGORY_ID || !interaction.channel.name.startsWith('ticket-')) {
+        return interaction.reply({ 
+            content: "Questo comando funziona solo all'interno di un canale ticket.", 
+            ephemeral: true 
+        });
+    }
+    
+    // Controlla i permessi: solo l'utente che ha aperto il ticket (se è in topic) o lo staff può chiudere.
+    // Per semplicità, permettiamo la chiusura a chiunque abbia il pulsante (l'utente o lo staff)
+    
+    await interaction.deferReply(); // Dobbiamo rispondere pubblicamente o deferire
+
+    try {
+        // Rimuovi i componenti (i pulsanti) per prevenire ulteriori azioni
+        await interaction.editReply({
+            content: `🔒 **Ticket Chiuso!** Questo canale verrà eliminato tra 5 secondi. | **Ticket Closed!** This channel will be deleted in 5 seconds.`,
+            embeds: [],
+            components: []
+        });
+
+        // Elimina il canale dopo un breve ritardo
+        setTimeout(async () => {
+            await interaction.channel.delete('Ticket chiuso dall\'utente o dallo staff.');
+        }, 5000); // 5 secondi di attesa
+
+    } catch (error) {
+        console.error("❌ Errore nella chiusura del ticket:", error);
+        await interaction.editReply({
+            content: "Si è verificato un errore durante la chiusura del ticket. Assicurati che il BOT abbia i permessi di `Manage Channels`.",
+        });
+    }
+}
+
 module.exports = {
-    createTicketChannel
+    createTicketChannel,
+    closeTicket // ⭐ ESPORTIAMO LA NUOVA FUNZIONE ⭐
 };
