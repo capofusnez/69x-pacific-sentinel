@@ -3,11 +3,8 @@
 const config = require('../config');
 const { getData, saveData } = require('./db');
 
-// La flag Ephemeral è rappresentata dal valore numerico 64.
-const EPHEHEMERAL_FLAG = 64; 
-
 /**
- * Funzione per calcolare l'XP richiesto per un dato livello.
+ * Funzione per calcolare l'XP totale richiesto per raggiungere un dato livello.
  * @param {number} level Il livello target.
  * @returns {number} L'XP totale necessario per raggiungere quel livello.
  */
@@ -16,6 +13,19 @@ function calculateRequiredXp(level) {
     // Assunzione: 1000 XP per ogni livello
     return level * 1000; 
 }
+
+/**
+ * Calcola il livello attuale in base all'XP totale accumulato.
+ * @param {number} totalXp - L'XP totale dell'utente.
+ * @returns {number} Il livello esatto.
+ */
+function calculateLevel(totalXp) {
+    if (totalXp < 1000) return 0;
+    
+    // Calcola il livello dividendo l'XP totale per l'XP richiesto per livello (1000)
+    return Math.floor(totalXp / 1000); 
+}
+
 
 // Funzione principale che esegue il loop XP (controlla gli stati di gioco)
 function xpTickLoop(client) {
@@ -74,7 +84,7 @@ function xpTickLoop(client) {
 
 
 /**
- * Funzione per aggiungere XP manualmente (usata da /xp-add).
+ * Funzione per aggiungere XP manualmente (usata da /xp-add) o tramite messaggi.
  * @param {string} userId - L'ID dell'utente.
  * @param {number} amount - La quantità di XP da aggiungere.
  */
@@ -87,7 +97,7 @@ function addXP(userId, amount) {
     
     levels[userId].xp += amount;
     
-    // NOTA: Idealmente, qui andrebbe un check per il level up.
+    // Potenziale logica di Level Up qui, ma per non complicare la logica la manteniamo nel loop XP/tick
     
     saveData(config.FILES.LEVELS, levels);
     
@@ -98,13 +108,14 @@ function addXP(userId, amount) {
  * Funzione per aggiungere XP al messaggio (da usare in events/messageCreate.js)
  */
 function addMessageXp(userId) {
-    // ... (Aggiungi qui la logica completa per l'XP sui messaggi - Sostituisci con la tua logica)
+    // Sostituisci con la tua logica di guadagno XP da messaggio
     addXP(userId, config.XP_GAINS.XP_PER_MESSAGE || 10);
 }
 
 
 /**
  * Recupera le statistiche di livello/XP di un utente per l'embed.
+ * ⭐ RISOLVE L'ERRORE DEL LIVELLO 0 ⭐
  * @param {string} guildId L'ID della gilda (non usato qui, ma mantenuto per chiarezza)
  * @param {string} userId L'ID dell'utente.
  * @returns {{xp: number, level: number, nextLevelXp: number, progressPercent: number}}
@@ -113,29 +124,39 @@ function getUserLevelInfo(guildId, userId) {
     const levels = getData(config.FILES.LEVELS);
     
     const userData = levels[userId] || { xp: 0, level: 0 };
-    const currentLevel = userData.level;
     const currentXp = userData.xp;
 
-    const xpTotalRequired = calculateRequiredXp(currentLevel + 1);
+    // ⭐ CORREZIONE CRUCIALE: Ricalcola il livello esatto in base all'XP totale salvato
+    const correctLevel = calculateLevel(currentXp); 
+
+    // XP totale necessario per raggiungere il livello successivo
+    const xpTotalRequiredForNext = calculateRequiredXp(correctLevel + 1);
     
+    // XP accumulato OLTRE l'ultimo livello raggiunto (per la barra di progresso)
+    const xpPassedLastLevel = currentXp - calculateRequiredXp(correctLevel);
+
+    // Calcola la percentuale di progresso
     let progressPercent = 0;
-    if (xpTotalRequired > 0) {
-        progressPercent = Math.min(100, Math.floor((currentXp / xpTotalRequired) * 100));
+    // XP richiesto per il livello attuale (differenza tra il prossimo e l'attuale, che è 1000)
+    const xpDifferenceForCurrentLevel = xpTotalRequiredForNext - calculateRequiredXp(correctLevel); 
+
+    if (xpDifferenceForCurrentLevel > 0) {
+        progressPercent = Math.min(100, Math.floor((xpPassedLastLevel / xpDifferenceForCurrentLevel) * 100));
     }
     
     return { 
         xp: currentXp,
-        level: currentLevel,
-        nextLevelXp: xpTotalRequired,
+        level: correctLevel, // <-- USA IL LIVELLO RICALCOLATO
+        nextLevelXp: xpTotalRequiredForNext,
         progressPercent: progressPercent
     };
 }
 
 
-// ⭐ ESPORTAZIONE CORRETTA ⭐
+// ⭐ ESPORTAZIONE COMPLETA ⭐
 module.exports = {
     xpTickLoop,
     addMessageXp,
     getUserLevelInfo,
-    addXP, // <-- ESSENZIALE PER IL COMANDO XP-ADD
+    addXP, 
 };
