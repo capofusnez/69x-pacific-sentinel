@@ -37,7 +37,7 @@ const client = new Client({
  * Helper per dividere i messaggi lunghi (> 4000 caratteri) (FIX 4000 limit)
  */
 async function sendLongMessage(channel, content, replyTo) {
-    const MAX_LENGTH = 4000;
+    const MAX_LENGTH = 2000;
     
     // Se il messaggio è corto, invia direttamente
     if (content.length <= MAX_LENGTH) {
