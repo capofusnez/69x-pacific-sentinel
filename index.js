@@ -23,7 +23,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,   
-        GatewayIntentBits.GuildPresences, // NECESSARIO per tracciare lo stato di gioco e l'attività
+        GatewayIntentBits.GuildPresences, // NECESSARIO per tracciare lo stato di gioco
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent, 
     ],
@@ -34,10 +34,11 @@ const client = new Client({
 // --------------------------------------------------------
 
 /**
- * Helper per dividere i messaggi lunghi (> 4000 caratteri) (FIX 4000 limit)
+ * Helper per dividere i messaggi lunghi (> 2000 caratteri) (FIX 2000 limit)
  */
 async function sendLongMessage(channel, content, replyTo) {
-    const MAX_LENGTH = 2000;
+    // Usiamo 2000 per garantire che anche il primo chunk (che è una reply) passi
+    const MAX_LENGTH = 2000; 
     
     // Se il messaggio è corto, invia direttamente
     if (content.length <= MAX_LENGTH) {
@@ -47,12 +48,10 @@ async function sendLongMessage(channel, content, replyTo) {
         return await channel.send(content);
     }
     
-    // Se il messaggio è lungo, dividi in blocchi e invia
     const chunks = [];
     let currentChunk = '';
 
     for (const line of content.split('\n')) {
-        // Controlla se l'aggiunta della riga e del ritorno a capo supera il limite
         if (currentChunk.length + line.length + 1 <= MAX_LENGTH) {
             currentChunk += line + '\n';
         } else {
@@ -66,13 +65,10 @@ async function sendLongMessage(channel, content, replyTo) {
         chunks.push(currentChunk);
     }
 
-    // Invia tutti i blocchi
     for (const [index, chunk] of chunks.entries()) {
         if (index === 0 && replyTo) {
-            // Risponde al messaggio originale solo con il primo chunk
             await replyTo.reply(chunk);
         } else {
-            // Invia i successivi come messaggi normali
             await channel.send(chunk);
         }
     }
@@ -80,7 +76,7 @@ async function sendLongMessage(channel, content, replyTo) {
 
 
 /**
- * Verifica se un membro sta giocando a DayZ (FIX per toLowerCase crash)
+ * Verifica se un membro sta giocando a DayZ
  */
 client.isPlayingDayZ = (member) => {
     if (!member.presence || !member.presence.activities) return false;
@@ -99,11 +95,12 @@ client.isPlayingDayZ = (member) => {
 // --------------------------------------------------------
 
 const commandsPath = path.join(__dirname, 'commands');
-commandHandler.loadCommands(commandsPath);
+client.commands = commandHandler.loadCommands(commandsPath); // Inizializza client.commands
 
 eventHandler.loadEvents(client);
 
-commandHandler.updateAllCommands(client);
+// Chiama l'aggiornamento comandi qui (viene eseguito una sola volta all'avvio)
+commandHandler.updateAllCommands(client); 
 
 // --------------------------------------------------------
 // GESTIONE CHAT AI (Listener MessageCreate)
@@ -134,8 +131,8 @@ client.on(Events.MessageCreate, async message => {
             await sendLongMessage(message.channel, answer, message); 
             
         } catch (err) {
-            console.error("Errore Gemini in sessione AI:", err);
-            // Non usare reply per l'errore nel caso sia un messaggio troppo lungo.
+            console.error("⚠ Errore Gemini in sessione AI:", err);
+            // Invia come messaggio normale per evitare loop di risposta fallita
             await message.channel.send("⚠ Errore comunicando con l'AI. Riprova tra qualche minuto.");
         }
     }
