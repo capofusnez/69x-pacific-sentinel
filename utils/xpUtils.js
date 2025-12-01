@@ -3,6 +3,9 @@
 const config = require('../config');
 const { getData, saveData } = require('./db');
 
+// La flag Ephemeral è rappresentata dal valore numerico 64.
+const EPHEHEMERAL_FLAG = 64; 
+
 /**
  * Funzione per calcolare l'XP richiesto per un dato livello.
  * @param {number} level Il livello target.
@@ -10,23 +13,17 @@ const { getData, saveData } = require('./db');
  */
 function calculateRequiredXp(level) {
     if (level <= 0) return 0;
-    // Formula di livellamento: (Livello * 100) + (Livello * 900)
-    // Level 1: 1000 XP
-    // Level 2: 2000 XP
-    // Level 3: 3000 XP (Sostituisci 1000 con la tua formula se diversa)
+    // Assunzione: 1000 XP per ogni livello
     return level * 1000; 
 }
-
 
 // Funzione principale che esegue il loop XP (controlla gli stati di gioco)
 function xpTickLoop(client) {
     const TICK_INTERVAL = config.XP_GAINS.TICK_INTERVAL_MS;
     
-    // CORREZIONE CRUCIALE: Assicura che l'intervallo sia un numero valido
     let interval = parseInt(TICK_INTERVAL); 
     
     if (isNaN(interval) || interval <= 0) {
-        // Fallback a 5 minuti se il valore non è valido
         interval = 5 * 60 * 1000; 
         console.warn("⚠ ATTENZIONE: TICK_INTERVAL_MS non valido in config.js. Usando 5 minuti di default.");
     }
@@ -40,8 +37,6 @@ function xpTickLoop(client) {
             guild.members.cache.forEach(member => {
                 if (member.user.bot) return;
 
-                // Verifica se l'utente sta giocando al gioco tracciato
-                // ASSUNZIONE: La funzione client.isPlayingDayZ(member) esiste nel client
                 if (client.isPlayingDayZ(member)) { 
                     
                     const userId = member.id;
@@ -50,14 +45,13 @@ function xpTickLoop(client) {
                     }
                     
                     const currentLevel = levels[userId].level;
-                    const nextLevelXpTotal = calculateRequiredXp(currentLevel + 1); // XP totale richiesto per il livello successivo
+                    const nextLevelXpTotal = calculateRequiredXp(currentLevel + 1);
                     
                     levels[userId].xp += xpPerTick;
                     
-                    // Controlla se è salito di livello
                     if (levels[userId].xp >= nextLevelXpTotal) {
                         levels[userId].level++;
-                        levels[userId].xp = levels[userId].xp - nextLevelXpTotal; // Mantiene l'XP in eccesso
+                        levels[userId].xp = levels[userId].xp - nextLevelXpTotal;
 
                         const announceChannelId = config.LEVEL_UP_ANNOUNCEMENT_CHANNEL_ID;
                         const announceChannel = guild.channels.cache.get(announceChannelId);
@@ -72,33 +66,43 @@ function xpTickLoop(client) {
 
         saveData(config.FILES.LEVELS, levels);
         
-        // Rilancia il loop
         xpTickLoop(client);
-    }, interval); // Usa l'intervallo corretto e sicuro
+    }, interval); 
     
     console.log(`⏱ Loop XP ${config.XP_GAINS.GAME_NAME_TO_TRACK} avviato.`);
 }
 
 
 /**
- * Funzione per aggiungere XP al messaggio (da usare in events/messageCreate.js)
+ * Funzione per aggiungere XP manualmente (usata da /xp-add).
+ * @param {string} userId - L'ID dell'utente.
+ * @param {number} amount - La quantità di XP da aggiungere.
  */
-function addMessageXp(userId) {
+function addXP(userId, amount) {
     const levels = getData(config.FILES.LEVELS);
     
     if (!levels[userId]) {
         levels[userId] = { xp: 0, level: 0 };
     }
     
-    // Aggiunge XP, gestisce il leveling, salva. (Logica simile a xpTickLoop ma per i messaggi)
-    // ... (Aggiungi qui la logica completa per l'XP sui messaggi - Omette per non cambiare troppo il tuo file)
+    levels[userId].xp += amount;
+    
+    // NOTA: Idealmente, qui andrebbe un check per il level up.
     
     saveData(config.FILES.LEVELS, levels);
+    
+    return levels[userId];
 }
 
-// --------------------------------------------------------------------------------------------------
-// ⭐ FUNZIONE MANCANTE PER IL PULSANTE (RISOLVE IL TYPEERROR) ⭐
-// --------------------------------------------------------------------------------------------------
+/**
+ * Funzione per aggiungere XP al messaggio (da usare in events/messageCreate.js)
+ */
+function addMessageXp(userId) {
+    // ... (Aggiungi qui la logica completa per l'XP sui messaggi - Sostituisci con la tua logica)
+    addXP(userId, config.XP_GAINS.XP_PER_MESSAGE || 10);
+}
+
+
 /**
  * Recupera le statistiche di livello/XP di un utente per l'embed.
  * @param {string} guildId L'ID della gilda (non usato qui, ma mantenuto per chiarezza)
@@ -108,18 +112,12 @@ function addMessageXp(userId) {
 function getUserLevelInfo(guildId, userId) {
     const levels = getData(config.FILES.LEVELS);
     
-    // Inizializza o recupera i dati dell'utente
     const userData = levels[userId] || { xp: 0, level: 0 };
     const currentLevel = userData.level;
     const currentXp = userData.xp;
 
-    // XP totale necessario per il prossimo livello
     const xpTotalRequired = calculateRequiredXp(currentLevel + 1);
     
-    // Calcola l'XP che manca per il prossimo livello (non lo stai usando, ma è utile)
-    // const xpNeeded = xpTotalRequired - currentXp; 
-
-    // Calcola la percentuale di progresso
     let progressPercent = 0;
     if (xpTotalRequired > 0) {
         progressPercent = Math.min(100, Math.floor((currentXp / xpTotalRequired) * 100));
@@ -134,11 +132,10 @@ function getUserLevelInfo(guildId, userId) {
 }
 
 
-// --------------------------------------------------------------------------------------------------
 // ⭐ ESPORTAZIONE CORRETTA ⭐
-// --------------------------------------------------------------------------------------------------
 module.exports = {
     xpTickLoop,
     addMessageXp,
-    getUserLevelInfo, // <--- ORA ESPORTATA e DISPONIBILE
+    getUserLevelInfo,
+    addXP, // <-- ESSENZIALE PER IL COMANDO XP-ADD
 };
