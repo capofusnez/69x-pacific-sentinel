@@ -1,11 +1,6 @@
 // events/interactionCreate.js
-
-const { 
-    Events, 
-    EmbedBuilder, 
-    // Rimuovi InteractionResponseFlags qui
-    ...Discord // <-- Importa l'intero modulo Discord.js come "Discord"
-} = require('discord.js'); 
+const Discord = require('discord.js'); // <-- Importa tutto il modulo come "Discord"
+const { Events, EmbedBuilder } = Discord; // <-- Destruttura solo le classi che servono
 
 const config = require('../config');
 const { getUserLevelInfo } = require('../utils/xpUtils');
