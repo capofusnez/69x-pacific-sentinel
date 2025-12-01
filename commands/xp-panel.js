@@ -19,17 +19,23 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
         
         const xpEmbed = new EmbedBuilder()
-            .setTitle("⭐ Controllo Livello e XP")
+            .setTitle("⭐ 📈 Controllo Livello e XP | Level and XP Check")
             .setDescription(
+                "IT (Italiano):" +
+                "Premi il pulsante qui sotto per vedere il tuo livello e i tuoi XP totali.\n" +
+                "Guadagni XP semplicemente giocando a DayZ sul server." +
+                "EN (English):" +
                 "Premi il pulsante qui sotto per vedere il tuo livello e i tuoi XP totali.\n" +
                 "Guadagni XP semplicemente giocando a DayZ sul server."
+                                
+                
             )
             .setColor("#FEE75C");
         
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("xp_check_level")
-                .setLabel("📈 Controlla il mio Livello")
+                .setLabel("📈 Controlla XP / Check XP")
                 .setStyle(ButtonStyle.Primary)
         );
 
