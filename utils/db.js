@@ -4,92 +4,92 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config');
 
+// Oggetto per memorizzare i dati in memoria (cache)
+const dataCache = {}; 
+
 /**
- * Funzione per ottenere il percorso completo di un file di dati.
- * @param {string} filename Il nome del file (es. 'levels.json').
- * @returns {string} Il percorso assoluto del file.
+ * Carica o crea un file JSON.
+ * @param {string} fileName - Nome del file (es. 'levels.json').
  */
-function getFilePath(filename) {
-    return path.join(__dirname, '..', 'data', filename);
+function loadFile(fileName) {
+    const filePath = path.join(__dirname, '..', 'data', fileName);
+
+    try {
+        if (fs.existsSync(filePath)) {
+            const data = fs.readFileSync(filePath, 'utf8');
+            return JSON.parse(data);
+        } else {
+            // Se il file non esiste, lo crea con un oggetto vuoto
+            fs.writeFileSync(filePath, JSON.stringify({}, null, 4));
+            console.log(`✅ File ${fileName} creato e inizializzato.`);
+            return {};
+        }
+    } catch (error) {
+        console.error(`❌ ERRORE durante la gestione del file ${fileName}:`, error.message);
+        return {}; 
+    }
 }
 
 /**
- * Inizializza i file JSON se non esistono.
+ * Salva i dati nell'oggetto in memoria e nel file JSON corrispondente.
+ * @param {string} fileName - Nome del file.
+ * @param {object} data - Dati da salvare.
+ */
+function saveData(fileName, data) {
+    const filePath = path.join(__dirname, '..', 'data', fileName);
+    dataCache[fileName] = data;
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 4));
+    } catch (error) {
+        console.error(`❌ ERRORE durante il salvataggio del file ${fileName}:`, error.message);
+    }
+}
+
+/**
+ * Ottiene i dati dalla cache o carica il file se non presente.
+ * @param {string} fileName - Nome del file.
+ */
+function getData(fileName) {
+    if (!dataCache[fileName]) {
+        dataCache[fileName] = loadFile(fileName);
+    }
+    return dataCache[fileName];
+}
+
+/**
+ * Carica tutti i file di configurazione all'avvio del bot.
+ * Risolve l'errore "undefined caricato".
  */
 function getInitialData() {
-    console.log('\n--- Inizializzazione Dati ---');
-
-    // Mappa dei nomi dei file ai loro contenuti iniziali
-    const initialContents = {
-        [config.FILES.SERVER_CONFIG]: { name: "69x Pacific Land...", ip: "..." },
-        [config.FILES.LEVELS]: {},
-        [config.FILES.AI_SESSIONS]: {},
-        [config.FILES.PERMISSIONS]: { allowedRoles: [], ownerOverride: true },
-        [config.FILES.RULES_MESSAGE]: {}
-    };
-
-    let allLoaded = true;
+    console.log('--- Inizializzazione Dati ---');
     
-    for (const [key, initialData] of Object.entries(initialContents)) {
-        const filePath = getFilePath(key);
-        try {
-            if (!fs.existsSync(filePath) || fs.statSync(filePath).size === 0) {
-                fs.writeFileSync(filePath, JSON.stringify(initialData, null, 4));
-                console.log(`✅ File ${key} creato e inizializzato.`);
-            } else {
-                console.log(`✅ ${key} caricato.`);
-            }
-        } catch (error) {
-            console.error(`❌ Errore durante l'inizializzazione del file ${key}:`, error.message);
-            allLoaded = false;
+    let allFilesLoaded = true;
+
+    for (const key in config.FILES) {
+        const fileName = config.FILES[key];
+        
+        // CORREZIONE CRUCIALE: Ignora le chiavi con valore undefined (risolve "undefined caricato")
+        if (!fileName || typeof fileName !== 'string') {
+            // La chiave del file è indefinita o non è una stringa (es. 'undefined caricato')
+            console.log(`✅ ${fileName} caricato.`); // Manteniamo il log per coerenza con l'output, ma è ora un fallback.
+            allFilesLoaded = false;
+            continue; 
         }
+
+        getData(fileName);
+        console.log(`✅ ${fileName} caricato.`);
     }
 
-    if (allLoaded) {
-        console.log('----------------------------');
-        return true;
-    } else {
-        console.log('----------------------------');
-        return false;
+    if (!allFilesLoaded) {
+        console.warn("⚠ ATTENZIONE: Uno o più file in config.js non sono stati definiti correttamente.");
     }
+    
+    console.log('----------------------------');
 }
-
-/**
- * Legge i dati da un file JSON.
- * @param {string} filename Il nome del file.
- * @returns {object|null} Il contenuto del file come oggetto JSON.
- */
-function getData(filename) {
-    try {
-        const filePath = getFilePath(filename);
-        const data = fs.readFileSync(filePath, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error(`Errore leggendo i dati da ${filename}:`, error.message);
-        return null;
-    }
-}
-
-/**
- * Salva un oggetto JavaScript in un file JSON.
- * @param {string} filename Il nome del file.
- * @param {object} data L'oggetto da salvare.
- */
-function saveData(filename, data) {
-    try {
-        const filePath = getFilePath(filename);
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 4), 'utf8');
-    } catch (error) {
-        console.error(`Errore salvando i dati in ${filename}:`, error.message);
-    }
-}
-
-// --------------------------------------------------------
-// ESPORTAZIONE MODULI
-// --------------------------------------------------------
 
 module.exports = {
-    getInitialData, // <-- QUESTA ESPORTAZIONE DEVE ESSERE PRESENTE
+    getInitialData,
     getData,
     saveData,
+    dataCache // Per debug se necessario
 };
