@@ -2,7 +2,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { getPermissions } = require("../utils/serverUtils");
-const { addXP } = require('../utils/xpUtils'); // <-- IMPORTAZIONE CORRETTA
+const { addXP } = require('../utils/xpUtils'); 
 
 // Usiamo la flag numerica per Ephemeral
 const EPHEMERAL_FLAG = 64; 
