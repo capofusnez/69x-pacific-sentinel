@@ -58,7 +58,7 @@ module.exports = {
     // ------------------------------------------------------------
     // CONFIGURAZIONE PERMESSI E RUOLI
     // ------------------------------------------------------------
-    ADMIN_ROLES: ["INSERISCI_ID_RUOLO_ADMIN"], 
+    ADMIN_ROLES: ["441203826322702347"], 
     MODERATOR_ROLES: ["INSERISCI_ID_RUOLO_MODERATORE"], 
 
     // ------------------------------------------------------------
