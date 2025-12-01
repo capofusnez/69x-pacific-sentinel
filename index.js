@@ -98,4 +98,60 @@ client.isPlayingDayZ = (member) => {
 // GESTIONE EVENTI E COMANDI (Handler)
 // --------------------------------------------------------
 
-const commandsPath = path.join(__dirname, '
+const commandsPath = path.join(__dirname, 'commands');
+commandHandler.loadCommands(commandsPath);
+
+eventHandler.loadEvents(client);
+
+commandHandler.updateAllCommands(client);
+
+// --------------------------------------------------------
+// GESTIONE CHAT AI (Listener MessageCreate)
+// --------------------------------------------------------
+
+client.on(Events.MessageCreate, async message => {
+    // La logica per l'XP su messaggio è gestita da events/messageCreate.js
+    
+    if (message.author.bot || message.channel.type !== ChannelType.GuildText) return;
+    
+    const aiSessions = getData(config.FILES.AI_SESSIONS);
+    
+    // Controlla se il messaggio proviene da un canale AI attivo
+    if (aiSessions && aiSessions[message.channelId] && message.author.id === aiSessions[message.channelId].userId) {
+        
+        aiSessions[message.channelId].lastActivity = Date.now();
+        saveData(config.FILES.AI_SESSIONS, aiSessions);
+        
+        if (!AI_STATUS.available) {
+             return message.reply(getAiUnavailableMessage());
+        }
+
+        await message.channel.sendTyping();
+        try {
+            const answer = await askGemini(message.content);
+            
+            // CHIAMA LA FUNZIONE FIXATA PER GESTIRE MESSAGGI LUNGHI
+            await sendLongMessage(message.channel, answer, message); 
+            
+        } catch (err) {
+            console.error("Errore Gemini in sessione AI:", err);
+            // Non usare reply per l'errore nel caso sia un messaggio troppo lungo.
+            await message.channel.send("⚠ Errore comunicando con l'AI. Riprova tra qualche minuto.");
+        }
+    }
+});
+
+// --------------------------------------------------------
+// LOGIN E AVVIO
+// --------------------------------------------------------
+
+client.once(Events.ClientReady, c => {
+    console.log(`✅ Bot loggato come ${c.user.tag}`);
+    console.log(`✅ Bot ${c.user.tag} ONLINE!`);
+    
+    xpTickLoop(client); 
+    
+    c.user.setActivity(config.XP_GAINS?.GAME_NAME_TO_TRACK || 'DayZ', { type: ActivityType.Watching });
+});
+
+client.login(process.env.DISCORD_TOKEN);
