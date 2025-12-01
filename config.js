@@ -38,7 +38,7 @@ module.exports = {
     // ------------------------------------------------------------
     // SISTEMA AI
     // ------------------------------------------------------------
-    GEMINI_MODEL: "gemini-1.5-flash",
+    GEMINI_MODEL: "gemini-2.5-flash",
     AI_SESSION_TIMEOUT_MINUTES: 30,
     AI_SESSION_TIMEOUT_MS: 30 * 60 * 1000,
     
