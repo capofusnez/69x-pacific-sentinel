@@ -1,59 +1,74 @@
-// handlers/commandHandler.js
+const { REST, Routes } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+const config = require('../config'); // Assicurati di importare il file config
 
-const fs = require("fs");
-const { Collection, REST, Routes } = require("discord.js"); // Aggiunto REST e Routes
-const path = require("path");
-const config = require('../config'); // Necessario per ID e Token
+// Inizializza una Map per memorizzare i comandi
+const commands = new Map();
 
-// Collection per i comandi
-const commands = new Collection();
-const commandsToRegister = []; // Per l'API Discord
-
+/**
+ * Carica i file dei comandi da una directory.
+ * @param {string} commandsPath - Il percorso della directory dei comandi.
+ */
 function loadCommands(commandsPath) {
-    try {
-        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-        for (const file of commandFiles) {
-            const command = require(path.join(commandsPath, file));
-            if ("data" in command && "execute" in command) {
+    for (const file of commandFiles) {
+        const filePath = path.join(commandsPath, file);
+        try {
+            const command = require(filePath);
+            if ('data' in command && 'execute' in command) {
                 commands.set(command.data.name, command);
-                commandsToRegister.push(command.data);
             } else {
-                console.log(`[WARNING] Il comando in ${file} manca di "data" o "execute" richiesti.`);
+                console.warn(`[ATTENZIONE] Il comando in ${filePath} è privo di "data" o "execute" richiesti.`);
             }
+        } catch (error) {
+            console.error(`[ERRORE] Impossibile caricare il comando in ${filePath}: ${error.message}`);
         }
-        console.log(`✅ Caricati ${commands.size} comandi slash.`);
-    } catch (err) {
-        console.error("⚠ Errore nel caricamento dei comandi:", err);
     }
-}
-
-function getCommands() {
+    console.log(`✅ Caricati ${commands.size} comandi slash.`);
     return commands;
 }
 
-function getCommandsToRegister() {
-    return commandsToRegister;
-}
-
 /**
- * Registra o aggiorna tutti i comandi slash sul server o globalmente.
- * @param {Client} client L'istanza del client Discord.
+ * Registra o aggiorna tutti i comandi slash sul server.
+ * @param {Client} client - L'istanza del client Discord.
  */
 async function updateAllCommands(client) {
-    const commands = getCommandsToRegister();
-    const rest = new REST().setToken(process.env.DISCORD_TOKEN);
+    // ------------------------------------------------------------------
+    // CORREZIONE SERVER_ID: Legge l'ID del Server da .env
+    // ------------------------------------------------------------------
+    const GUILD_ID = process.env.SERVER_ID; 
+    const CLIENT_ID = process.env.CLIENT_ID; // Legge il Client ID da .env
 
+    if (!CLIENT_ID) {
+        console.error("❌ ERRORE: CLIENT_ID non trovato nel file .env.");
+        return;
+    }
+
+    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+    const commandsData = Array.from(commands.values()).map(command => command.data.toJSON());
+
+    console.log(`🌀 Avvio l'aggiornamento di ${commandsData.length} comandi slash...`);
+
+    // Determina l'endpoint: Guild-specifico (più veloce) o Globale
+    let endpoint;
+    if (GUILD_ID) {
+        endpoint = Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID);
+        console.log(`(Modalità: Registrazione su Guild per ID: ${GUILD_ID})`);
+    } else {
+        endpoint = Routes.applicationCommands(CLIENT_ID);
+        console.warn("(Modalità: SERVER_ID non trovato. Registrazione Globale (può richiedere fino a 1 ora).)");
+    }
+    
     try {
-        console.log(`🌀 Avvio l'aggiornamento di ${commands.length} comandi slash...`);
+        const data = await rest.put(endpoint, { body: commandsData });
 
-        // Aggiorna i comandi sul server specifico (più veloce per i test)
-        const data = await rest.put(
-            Routes.applicationGuildCommands(process.env.CLIENT_ID, config.SERVER_ID),
-            { body: commands },
-        );
-
-        console.log(`✅ Registrati ${data.length} comandi slash sul server.`);
+        if (GUILD_ID) {
+            console.log(`✅ Registrati ${data.length} comandi slash sul server.`);
+        } else {
+             console.log(`✅ Registrati ${data.length} comandi slash a livello globale.`);
+        }
     } catch (error) {
         console.error("❌ ERRORE durante l'aggiornamento dei comandi slash:", error);
     }
@@ -61,7 +76,6 @@ async function updateAllCommands(client) {
 
 module.exports = {
     loadCommands,
-    getCommands,
-    getCommandsToRegister,
-    updateAllCommands, // <--- FUNZIONE AGGIUNTA
+    updateAllCommands,
+    commands // Esporta i comandi per essere usati nell'event handler
 };
