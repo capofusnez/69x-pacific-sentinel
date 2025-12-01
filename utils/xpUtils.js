@@ -1,7 +1,8 @@
 // utils/xpUtils.js
 
 const config = require('../config');
-const { getData, saveData } = require('./db'); // Assicurati che './db' sia il percorso corretto per i tuoi helper
+// Assumi che './db' contenga le tue funzioni getData e saveData (es. da un file db.js)
+const { getData, saveData } = require('./db'); 
 
 // --- Funzioni di calcolo ---
 
@@ -41,11 +42,16 @@ async function updateUserRole(member, newLevel) {
         console.warn("⚠ LEVEL_ROLES non configurato in config.js. Salto l'aggiornamento dei ruoli.");
         return;
     }
+    
+    // ⭐ LOG DI DEBUG INIZIALE ⭐
+    console.log(`[DEBUG RUOLI] Aggiornamento ruoli per: ${member.user.tag}. Livello raggiunto: ${newLevel}`);
+    console.log(`[DEBUG RUOLI] Ruoli attuali del membro: ${member.roles.cache.map(r => r.name).join(', ')}`);
+
 
     // 1. Trova il ruolo di livello più alto che l'utente è idoneo a ricevere
     const eligibleRoles = config.LEVEL_ROLES
         .filter(roleConfig => newLevel >= roleConfig.level)
-        .sort((a, b) => b.level - a.level); // Ordina per livello decrescente
+        .sort((a, b) => b.level - a.level); // Ordina per livello decrescente (dal più alto al più basso)
 
     if (eligibleRoles.length === 0) return; 
 
@@ -59,6 +65,9 @@ async function updateUserRole(member, newLevel) {
         .filter(role => allLevelRoleIds.includes(role.id) && role.id !== highestEligibleRoleId)
         .map(role => role.id);
     
+    console.log(`[DEBUG RUOLI] Ruolo più alto da assegnare: ${member.guild.roles.cache.get(highestEligibleRoleId)?.name || highestEligibleRoleId}`);
+    console.log(`[DEBUG RUOLI] Ruoli da rimuovere prima dell'assegnazione: ${rolesToRemove.map(id => member.guild.roles.cache.get(id)?.name || id).join(', ')}`);
+
     try {
         // 4. Rimuovi i ruoli di livello precedenti
         if (rolesToRemove.length > 0) {
@@ -69,8 +78,13 @@ async function updateUserRole(member, newLevel) {
         if (!member.roles.cache.has(highestEligibleRoleId)) {
             await member.roles.add(highestEligibleRoleId, 'Assegnazione nuovo ruolo di livello');
         }
+        
+        console.log(`[DEBUG RUOLI] Operazione ruoli completata con successo.`);
+        
     } catch (e) {
-        console.error(`❌ Errore nell'aggiornamento del ruolo per ${member.user.tag}: Assicurati che il ruolo del BOT sia SOPRA i ruoli di livello.`, e);
+        // ⭐ LOG DI ERRORE DETTAGLIATO ⭐
+        console.error(`❌ [ERRORE FATALE RUOLI] Fallimento nell'aggiornamento dei ruoli per ${member.user.tag}:`, e.message);
+        console.error("Motivo probabile: Permessi mancanti (controlla Gerarchia Ruolo BOT e permessi 'Gestisci Ruoli').");
     }
 }
 
@@ -89,7 +103,6 @@ function xpTickLoop(client) {
     
     if (isNaN(interval) || interval <= 0) {
         interval = 5 * 60 * 1000; 
-        console.warn("⚠ ATTENZIONE: TICK_INTERVAL_MS non valido in config.js. Usando 5 minuti di default.");
     }
 
     setTimeout(async () => { // Aggiunto 'async' per usare 'await'
@@ -159,6 +172,11 @@ function xpTickLoop(client) {
 
 // --- Altre Funzioni XP ---
 
+/**
+ * Funzione per aggiungere XP manualmente (usata da /xp-add) o tramite messaggi.
+ * @param {string} userId - L'ID dell'utente.
+ * @param {number} amount - La quantità di XP da aggiungere.
+ */
 function addXP(userId, amount) {
     const levels = getData(config.FILES.LEVELS);
     
@@ -168,18 +186,29 @@ function addXP(userId, amount) {
     
     levels[userId].xp += amount;
     
-    // Non gestiamo l'assegnazione dei ruoli qui per evitare chiamate API in rapida successione
+    // Nota: L'aggiornamento dei ruoli non viene fatto qui per non rallentare l'app. 
+    // Verrà gestito dal xpTickLoop o da un'eventuale successiva chiamata.
     
     saveData(config.FILES.LEVELS, levels);
     
     return levels[userId];
 }
 
+/**
+ * Funzione per aggiungere XP al messaggio (da usare in events/messageCreate.js)
+ */
 function addMessageXp(userId) {
     addXP(userId, config.XP_GAINS.XP_PER_MESSAGE || 10);
 }
 
 
+/**
+ * Recupera le statistiche di livello/XP di un utente per l'embed.
+ * ⭐ RISOLVE L'ERRORE DEL LIVELLO 0 ⭐
+ * @param {string} guildId L'ID della gilda 
+ * @param {string} userId L'ID dell'utente.
+ * @returns {{xp: number, level: number, nextLevelXp: number, progressPercent: number}}
+ */
 function getUserLevelInfo(guildId, userId) {
     const levels = getData(config.FILES.LEVELS);
     
@@ -215,5 +244,6 @@ module.exports = {
     addMessageXp,
     getUserLevelInfo,
     addXP, 
-    updateUserRole, // Esportato per il debug e i comandi admin
+    updateUserRole, 
+    calculateLevel // Utile per i comandi che devono ricalcolare il livello
 };
