@@ -7,7 +7,6 @@ const commands = new Map();
 
 /**
  * Carica i file dei comandi da una directory e li memorizza nella mappa.
- * @param {string} commandsPath - Il percorso della directory dei comandi.
  */
 function loadCommands(commandsPath) {
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -31,8 +30,6 @@ function loadCommands(commandsPath) {
 
 /**
  * Registra o aggiorna tutti i comandi slash sul server.
- * Risolve l'errore Invalid Form Body (guild_id).
- * @param {Client} client - L'istanza del client Discord.
  */
 async function updateAllCommands(client) {
     
@@ -49,7 +46,6 @@ async function updateAllCommands(client) {
 
     console.log(`🌀 Avvio l'aggiornamento di ${commandsData.length} comandi slash...`);
 
-    // Determina l'endpoint: usa l'ID del server per una registrazione rapida
     let endpoint;
     if (GUILD_ID) {
         endpoint = Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID);
@@ -75,5 +71,5 @@ async function updateAllCommands(client) {
 module.exports = {
     loadCommands,
     updateAllCommands,
-    commands // Esporta la mappa dei comandi
+    commands 
 };
