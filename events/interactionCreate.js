@@ -1,10 +1,8 @@
 // events/interactionCreate.js
 
-const { Events, EmbedBuilder, InteractionResponseFlags } = require('discord.js'); // <-- CORREZIONE: InteractionResponseFlags è qui!
+const { Events, EmbedBuilder, InteractionResponseFlags } = require('discord.js'); // <--- CORREZIONE: InteractionResponseFlags è qui!
 const config = require('../config');
-// Funzioni XP (per il pulsante di check livello)
 const { getUserLevelInfo } = require('../utils/xpUtils');
-// Funzione AI (per il pulsante di avvio sessione)
 const { createAiSession } = require('../commands/ai');
 
 module.exports = {
@@ -29,17 +27,18 @@ module.exports = {
                 console.error(`Errore nell'esecuzione del comando ${interaction.commandName}`);
                 console.error(error);
                 
-                // Errore nell'esecuzione del comando
                 const errorMessage = 'Si è verificato un errore durante l\'esecuzione di questo comando! | An error occurred while executing this command!';
+                
+                // Gestione errori comandi slash (risposta privata)
                 if (interaction.deferred || interaction.replied) {
                     await interaction.editReply({ 
                         content: errorMessage, 
-                        flags: InteractionResponseFlags.Ephemeral // Corretto
+                        flags: InteractionResponseFlags.Ephemeral
                     });
                 } else {
                     await interaction.reply({ 
                         content: errorMessage, 
-                        flags: InteractionResponseFlags.Ephemeral // Corretto
+                        flags: InteractionResponseFlags.Ephemeral
                     });
                 }
             }
@@ -57,13 +56,13 @@ module.exports = {
 
             // --- A. Gestione Pulsante Avvio Chat AI (ID: start_ai_session) ---
             if (customId === 'start_ai_session') {
-                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); // Corretto
+                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); 
                 return await createAiSession(interaction);
             }
             
             // --- B. Gestione Pulsante Check XP/Livello (ID: xp_check_level) ---
-            if (customId === 'xp_check_level') { // Assumiamo 'xp_check_level' come customId corretto
-                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); // Corretto
+            if (customId === 'xp_check_level') { 
+                await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); 
                 
                 try {
                     const { xp, level, nextLevelXp, progressPercent } = getUserLevelInfo(guildId, member.id);
@@ -83,28 +82,29 @@ module.exports = {
                         )
                         .setFooter({ text: 'L\'XP viene aggiornato giocando a DayZ o inviando messaggi. | XP updates by playing DayZ or sending messages.' });
 
-                    // Risposta di successo XP
+                    // Risposta di successo XP (risposta privata)
                     return interaction.editReply({ 
                         embeds: [rankEmbed], 
-                        flags: InteractionResponseFlags.Ephemeral // Corretto
+                        flags: InteractionResponseFlags.Ephemeral
                     });
                 } catch (error) {
                     console.error("Errore nel pulsante check_my_xp:", error);
                     
-                    // Risposta di errore XP
+                    // Risposta di errore XP (risposta privata)
                     return interaction.editReply({ 
                         content: 'Errore nel recupero delle tue statistiche XP. Riprova. | Error retrieving your XP stats. Please try again.', 
-                        flags: InteractionResponseFlags.Ephemeral // Corretto
+                        flags: InteractionResponseFlags.Ephemeral
                     });
                 }
             }
 
 
             // --- C. Gestione Pulsanti Ticket (Placeholder) ---
-            // Se nessun pulsante è stato gestito, rispondi per evitare timeout
+            
+            // Risposta per pulsante non riconosciuto (risposta privata)
             return interaction.reply({ 
                 content: 'Azione pulsante non riconosciuta. | Unrecognized button action.', 
-                flags: InteractionResponseFlags.Ephemeral // Corretto
+                flags: InteractionResponseFlags.Ephemeral
             });
         }
 
