@@ -1,16 +1,9 @@
 // commands/xp-panel.js
 
-const { 
-    SlashCommandBuilder, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle,
-    // Rimuovi InteractionResponseFlags qui
-    ...Discord // <-- Importa l'intero modulo Discord.js come "Discord"
-} = require("discord.js");
-const { getPermissions } = require("../utils/serverUtils");
+const Discord = require("discord.js"); // <-- Importa tutto il modulo come "Discord"
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = Discord; // <-- Destruttura solo le classi che servono
 
+const { getPermissions } = require("../utils/serverUtils");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("xp-panel")
