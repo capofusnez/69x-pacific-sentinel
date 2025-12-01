@@ -21,7 +21,7 @@ module.exports = {
         const xpEmbed = new EmbedBuilder()
             .setTitle("⭐ 📈 Controllo Livello e XP | Level and XP Check")
             .setDescription(
-                "**IT (Italiano):**" +
+                "**IT (Italiano):**\n" +
                 "Premi il pulsante qui sotto per vedere il tuo livello e i tuoi XP totali.\n" +
                 "Guadagni XP semplicemente giocando a DayZ sul server.\n" +
                 "\n"+
