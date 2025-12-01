@@ -1,98 +1,75 @@
 // config.js
-const path = require("path");
-
-// Importa le costanti necessarie da discord.js
-const { ActivityType, ButtonStyle } = require("discord.js"); 
 
 module.exports = {
     // ------------------------------------------------------------
-    // CONFIGURAZIONE GLOBALE (Da prendere da process.env)
+    // CONFIGURAZIONE BASE DEL BOT
     // ------------------------------------------------------------
-    CLIENT_ID: process.env.CLIENT_ID || "1442475115743940611",
-    SERVER_ID: process.env.SERVER_ID || "1442125105575628891",
-    BOT_TOKEN: process.env.DISCORD_TOKEN,
-    
-    // ------------------------------------------------------------
-    // CANALI E CATEGORIE
-    // ------------------------------------------------------------
-    RULES_CHANNEL_ID: process.env.RULES_CHANNEL_ID || "1442141514464759868",
-    RULES_CHANNEL_NAME: "📜┃regole・rules",
-    NEW_USER_CHANNEL_ID: process.env.WELCOME_CHANNEL_ID || "1442568117296562266", 
-    
-    SUPPORT_CATEGORY_NAME: "🆘 Supporto • Support",
-    AI_CATEGORY_NAME: "🤖 AI Sessions",
-    TICKET_ARCHIVE_CATEGORY_ID: process.env.TICKET_ARCHIVE_CATEGORY_ID || "1443351281145086144",
-    
-    // ------------------------------------------------------------
-    // PERCORSI FILE DATI
-    // ------------------------------------------------------------
-    DATA_PATH: path.join(__dirname, "data"),
-    FILES: {
-        SERVER_CONFIG: "serverconfig.json",
-        LEVELS: "levels.json",
-        AI_SESSIONS: "ai_sessions.json",
-        PERMISSIONS: "permissions.json",
-        RULES_MESSAGE: "rules_message.json"
-    },
+    PREFIX: '/', // Prefisso dei comandi (usiamo principalmente slash commands)
 
     // ------------------------------------------------------------
-    // SISTEMA AI
+    // CONFIGURAZIONE SISTEMA XP E LIVELING
     // ------------------------------------------------------------
-    GEMINI_MODEL: "gemini-2.5-flash",
-    AI_SESSION_TIMEOUT_MINUTES: 30,
-    AI_SESSION_TIMEOUT_MS: 30 * 60 * 1000,
-    
-    // ------------------------------------------------------------
-    // SISTEMA XP
-    // ------------------------------------------------------------
-
-    // Intervallo di tempo tra un controllo XP e l'altro (in minuti)
-    XP_TICK_INTERVAL_MIN: 5, 
-    
     XP_GAINS: {
-        // XP guadagnato ogni XP_TICK_INTERVAL_MIN se l'utente sta giocando a DayZ
-        DAYZ_PLAYING: 25, 
-        // Altri XP di base (opzionale)
-        MESSAGE_SEND: 1,
-        // NOME DEL GIOCO DA CERCARE NELLO STATO DI DISCORD
-        GAME_NAME_TO_TRACK: 'DayZ', 
+        // Nome del gioco da tracciare per l'XP (DEVE corrispondere al nome Discord)
+        GAME_NAME_TO_TRACK: "DayZ", 
+        // XP guadagnato per ogni ciclo di presenza (in gioco)
+        XP_PER_TICK: 25, 
+        // XP guadagnato per messaggio
+        XP_PER_MESSAGE: 15, 
+        // Tempo in millisecondi tra un tick XP e l'altro (5 minuti)
+        TICK_INTERVAL_MS: 5 * 60 * 1000, 
     },
+
+    // ID del canale dove annunciare i passaggi di livello (opzionale)
+    LEVEL_UP_ANNOUNCEMENT_CHANNEL_ID: "INSERISCI_ID_CANALE_ANNUNCI", 
+
+    // ------------------------------------------------------------
+    // CONFIGURAZIONE SISTEMA AI (GEMINI)
+    // ------------------------------------------------------------
+    // Nome della categoria dove il bot deve creare i canali AI
+    AI_CATEGORY_NAME: "🤖 | AI SESSIONS", 
+
+    // Tempo di inattività prima che un canale AI venga eliminato (in minuti)
+    AI_SESSION_TIMEOUT_MINUTES: 30, 
     
-    FRESH_SPAWN_ROLE_ID: "1442570652228784240", // Ruolo assegnato dopo l'accettazione delle regole
-
-    // Lista dei ruoli per il sistema di livelli
-    RANK_ROLES: [
-        { level: 0,  name: "Fresh Spawn",   roleId: "1442570652228784240" },
-        { level: 1,  name: "Survivor",      roleId: "1442570651696107711" },
-        { level: 5,  name: "Veteran Raider", roleId: "1442570650584875019" },
-        { level: 10, name: "Field Officer", roleId: "1442570649724784671" },
-        { level: 15, name: "Command Unit",   roleId: "1442570648705568798" },
-        { level: 20, name: "Overlord",      roleId: "1442570648022024292" }
-    ],
-
+    // Calcolo del tempo in millisecondi (30 min * 60 sec * 1000 ms)
+    AI_SESSION_TIMEOUT_MS: 30 * 60 * 1000, 
+    
+    // Frequenza con cui il bot esegue il check sui canali inattivi (in minuti)
+    AI_CLEANUP_LOOP_MINUTES: 5, 
+    
+    // Modello AI da utilizzare (gemini-2.5-flash è l'ultima versione stabile e veloce)
+    GEMINI_MODEL: "gemini-2.5-flash", 
+    
     // ------------------------------------------------------------
-    // TICKET
+    // CONFIGURAZIONE SISTEMA TICKET (Placeholder)
     // ------------------------------------------------------------
+    // ID della categoria dove verranno creati i canali ticket
+    TICKET_CATEGORY_ID: "INSERISCI_ID_CATEGORIA_TICKET", 
+
+    // Definisci i tipi di ticket che gli utenti possono aprire
     TICKET_TYPES: {
-        general: {
-            label: "💼 Supporto Generale",
-            category: 'YOUR_GENERAL_TICKET_CATEGORY_ID',
-            style: ButtonStyle.Secondary
-        },
-        bug: {
-            label: "⚙️ Segnalazione Bug",
-            category: 'YOUR_BUG_TICKET_CATEGORY_ID',
-            style: ButtonStyle.Danger // Rosso
-        },
-        report: {
-            label: "🚨 Segnalazione Utente",
-            category: 'YOUR_REPORT_TICKET_CATEGORY_ID',
-            style: ButtonStyle.Danger
-        },
-        suggestions: {
-            label: "💡 Suggerimento/Idea",
-            category: 'YOUR_SUGGESTION_CATEGORY_ID',
-            style: ButtonStyle.Success // Verde
-        }
+        // 'ID_PULSANTE': { label: 'Nome Mostrato', emoji: '🎫' }
+        'support': { label: 'Richiesta di Supporto', emoji: '❓' },
+        'report': { label: 'Segnala un Utente/Bug', emoji: '🚨' },
     },
-}; // <-- CHIUDE L'OGGETTO module.exports
+
+    // ------------------------------------------------------------
+    // CONFIGURAZIONE PERMESSI E RUOLI
+    // ------------------------------------------------------------
+    // ID dei ruoli Admin (per comandi amministrativi come /ai-panel)
+    ADMIN_ROLES: ["INSERISCI_ID_RUOLO_ADMIN"], 
+    
+    // ID dei ruoli Moderatore (per la gestione ticket)
+    MODERATOR_ROLES: ["INSERISCI_ID_RUOLO_MODERATORE"], 
+
+    // ------------------------------------------------------------
+    // CONFIGURAZIONE PATH FILE (Database Locali)
+    // ------------------------------------------------------------
+    FILES: {
+        LEVELS: 'levels.json',
+        PERMISSIONS: 'permissions.json',
+        AI_SESSIONS: 'ai_sessions.json',
+        SERVER_CONFIG: 'serverconfig.json',
+    }
+};
