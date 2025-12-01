@@ -1,9 +1,10 @@
 // commands/xp-panel.js
 
-const Discord = require("discord.js"); // <-- Importa tutto il modulo come "Discord"
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = Discord; // <-- Destruttura solo le classi che servono
+const Discord = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = Discord;
 
 const { getPermissions } = require("../utils/serverUtils");
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("xp-panel")
@@ -17,12 +18,12 @@ module.exports = {
         if (!interaction.member.permissions.has("Administrator") && !interaction.member.roles.cache.some(role => allowedRoles.includes(role.id))) {
             return interaction.reply({ 
                 content: "Non hai il permesso di usare questo comando.", 
-                flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                flags: Discord.InteractionResponseFlags.Ephemeral
             });
         }
 
         // 2. Defer Reply (risposta privata)
-        await interaction.deferReply({ flags: Discord.InteractionResponseFlags.Ephemeral }); // <-- NUOVA SINTASSI
+        await interaction.deferReply({ flags: Discord.InteractionResponseFlags.Ephemeral }); 
         
         const xpEmbed = new EmbedBuilder()
             .setTitle("⭐ 📈 Controllo Livello e XP | Level and XP Check")
@@ -53,7 +54,7 @@ module.exports = {
             // 3. Risposta di successo (risposta privata)
             await interaction.editReply({ 
                 content: "✅ Pannello XP inviato!", 
-                flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                flags: Discord.InteractionResponseFlags.Ephemeral
             });
             
         } catch (error) {
@@ -62,7 +63,7 @@ module.exports = {
             // 4. Risposta di errore (risposta privata)
             await interaction.editReply({ 
                 content: "⚠ Errore nell'invio del pannello XP.", 
-                flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                flags: Discord.InteractionResponseFlags.Ephemeral
             });
         }
     },
