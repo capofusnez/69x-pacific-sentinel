@@ -5,6 +5,9 @@ const config = require('../config');
 const { getUserLevelInfo } = require('../utils/xpUtils');
 const { createAiSession } = require('../commands/ai');
 
+// ⭐ AGGIUNGI L'IMPORTAZIONE DEL GESTORE TICKET ⭐
+const { createTicketChannel } = require('./ticketCreate'); // Assumendo che il file sia in events/ticketCreate.js
+
 // La flag Ephemeral è rappresentata dal valore numerico 64.
 const EPHEMERAL_FLAG = 64;
 
@@ -101,10 +104,22 @@ module.exports = {
                 }
             }
 
+            // ⭐ C. Gestione Pulsanti Ticket (ticket_create_...) ⭐
+            if (customId.startsWith('ticket_create_')) {
+                // Chiama la funzione di creazione ticket. La deferReply è gestita all'interno di createTicketChannel
+                // L'uso di flags: EPHEMERAL_FLAG è implicito nella funzione createTicketChannel per la risposta iniziale.
+                return await createTicketChannel(interaction);
+            }
 
-            // --- C. Gestione Pulsanti Ticket (Placeholder) ---
-            
-            // Risposta per pulsante non riconosciuto (risposta privata)
+            // ⭐ D. Gestione Pulsante Chiusura Ticket (ticket_close) ⭐
+            if (customId === 'ticket_close') {
+                // Se hai intenzione di creare una funzione dedicata per la chiusura (es. closeTicket), la chiameresti qui.
+                // Per ora, diamo una risposta per evitare l'errore "Azione non riconosciuta"
+                // await closeTicket(interaction);
+                return interaction.reply({ content: "Logica di chiusura ticket in fase di implementazione (ID: ticket_close)...", ephemeral: true });
+            }
+
+            // --- E. Risposta predefinita per pulsante non riconosciuto ---
             return interaction.reply({ 
                 content: 'Azione pulsante non riconosciuta. | Unrecognized button action.', 
                 flags: EPHEMERAL_FLAG // Usiamo il numero 64
