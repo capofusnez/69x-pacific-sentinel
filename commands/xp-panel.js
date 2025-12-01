@@ -6,7 +6,8 @@ const {
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle,
-    InteractionResponseFlags // <--- CORREZIONE: Importazione essenziale
+    // Rimuovi InteractionResponseFlags qui
+    ...Discord // <-- Importa l'intero modulo Discord.js come "Discord"
 } = require("discord.js");
 const { getPermissions } = require("../utils/serverUtils");
 
@@ -23,12 +24,12 @@ module.exports = {
         if (!interaction.member.permissions.has("Administrator") && !interaction.member.roles.cache.some(role => allowedRoles.includes(role.id))) {
             return interaction.reply({ 
                 content: "Non hai il permesso di usare questo comando.", 
-                flags: InteractionResponseFlags.Ephemeral
+                flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
             });
         }
 
         // 2. Defer Reply (risposta privata)
-        await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); 
+        await interaction.deferReply({ flags: Discord.InteractionResponseFlags.Ephemeral }); // <-- NUOVA SINTASSI
         
         const xpEmbed = new EmbedBuilder()
             .setTitle("⭐ 📈 Controllo Livello e XP | Level and XP Check")
@@ -59,7 +60,7 @@ module.exports = {
             // 3. Risposta di successo (risposta privata)
             await interaction.editReply({ 
                 content: "✅ Pannello XP inviato!", 
-                flags: InteractionResponseFlags.Ephemeral
+                flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
             });
             
         } catch (error) {
@@ -68,7 +69,7 @@ module.exports = {
             // 4. Risposta di errore (risposta privata)
             await interaction.editReply({ 
                 content: "⚠ Errore nell'invio del pannello XP.", 
-                flags: InteractionResponseFlags.Ephemeral
+                flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
             });
         }
     },
