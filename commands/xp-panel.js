@@ -1,10 +1,12 @@
+// commands/xp-panel.js
+
 const { 
     SlashCommandBuilder, 
     EmbedBuilder, 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle,
-    InteractionResponseFlags // 1. Aggiunta l'importazione necessaria
+    InteractionResponseFlags // <-- CORREZIONE: Ora è importato correttamente
 } = require("discord.js");
 const { getPermissions } = require("../utils/serverUtils");
 
@@ -17,16 +19,16 @@ module.exports = {
     async execute(interaction) {
         const { allowedRoles } = getPermissions();
         
-        // 2. Correzione per la risposta di permesso negato
+        // Risposta di permesso negato
         if (!interaction.member.permissions.has("Administrator") && !interaction.member.roles.cache.some(role => allowedRoles.includes(role.id))) {
             return interaction.reply({ 
                 content: "Non hai il permesso di usare questo comando.", 
-                flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral // Corretto
             });
         }
 
-        // 3. Correzione per deferReply
-        await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); // Corretto: da ephemeral: true
+        // Defer Reply
+        await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral }); // Corretto
         
         const xpEmbed = new EmbedBuilder()
             .setTitle("⭐ 📈 Controllo Livello e XP | Level and XP Check")
@@ -54,19 +56,19 @@ module.exports = {
                 components: [row]
             });
             
-            // 4. Correzione per la risposta di successo (interaction.editReply)
+            // Risposta di successo
             await interaction.editReply({ 
                 content: "✅ Pannello XP inviato!", 
-                flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral // Corretto
             });
             
         } catch (error) {
             console.error("Errore nell'invio del pannello XP:", error);
             
-            // 5. Correzione per la risposta di errore (interaction.editReply)
+            // Risposta di errore
             await interaction.editReply({ 
                 content: "⚠ Errore nell'invio del pannello XP.", 
-                flags: InteractionResponseFlags.Ephemeral // Corretto: da ephemeral: true
+                flags: InteractionResponseFlags.Ephemeral // Corretto
             });
         }
     },
