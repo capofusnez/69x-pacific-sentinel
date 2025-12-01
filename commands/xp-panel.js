@@ -24,6 +24,7 @@ module.exports = {
                 "IT (Italiano):" +
                 "Premi il pulsante qui sotto per vedere il tuo livello e i tuoi XP totali.\n" +
                 "Guadagni XP semplicemente giocando a DayZ sul server.\n" +
+                "\n"+
                 "EN (English):\n" +
                 "Press the button below to view your current level and total XP.\n" +
                 "You earn XP simply by **playing DayZ** on the server and **chatting** with the community!"
