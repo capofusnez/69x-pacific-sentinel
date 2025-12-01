@@ -1,6 +1,7 @@
 // events/interactionCreate.js
-const Discord = require('discord.js'); // <-- Importa tutto il modulo come "Discord"
-const { Events, EmbedBuilder } = Discord; // <-- Destruttura solo le classi che servono
+
+const Discord = require('discord.js');
+const { Events, EmbedBuilder } = Discord;
 
 const config = require('../config');
 const { getUserLevelInfo } = require('../utils/xpUtils');
@@ -34,12 +35,12 @@ module.exports = {
                 if (interaction.deferred || interaction.replied) {
                     await interaction.editReply({ 
                         content: errorMessage, 
-                        flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                        flags: Discord.InteractionResponseFlags.Ephemeral
                     });
                 } else {
                     await interaction.reply({ 
                         content: errorMessage, 
-                        flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                        flags: Discord.InteractionResponseFlags.Ephemeral
                     });
                 }
             }
@@ -57,13 +58,13 @@ module.exports = {
 
             // --- A. Gestione Pulsante Avvio Chat AI (ID: start_ai_session) ---
             if (customId === 'start_ai_session') {
-                await interaction.deferReply({ flags: Discord.InteractionResponseFlags.Ephemeral }); // <-- NUOVA SINTASSI
+                await interaction.deferReply({ flags: Discord.InteractionResponseFlags.Ephemeral }); 
                 return await createAiSession(interaction);
             }
             
             // --- B. Gestione Pulsante Check XP/Livello (ID: xp_check_level) ---
             if (customId === 'xp_check_level') { 
-                await interaction.deferReply({ flags: Discord.InteractionResponseFlags.Ephemeral }); // <-- NUOVA SINTASSI
+                await interaction.deferReply({ flags: Discord.InteractionResponseFlags.Ephemeral }); 
                 
                 try {
                     const { xp, level, nextLevelXp, progressPercent } = getUserLevelInfo(guildId, member.id);
@@ -86,7 +87,7 @@ module.exports = {
                     // Risposta di successo XP (risposta privata)
                     return interaction.editReply({ 
                         embeds: [rankEmbed], 
-                        flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                        flags: Discord.InteractionResponseFlags.Ephemeral
                     });
                 } catch (error) {
                     console.error("Errore nel pulsante check_my_xp:", error);
@@ -94,7 +95,7 @@ module.exports = {
                     // Risposta di errore XP (risposta privata)
                     return interaction.editReply({ 
                         content: 'Errore nel recupero delle tue statistiche XP. Riprova. | Error retrieving your XP stats. Please try again.', 
-                        flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                        flags: Discord.InteractionResponseFlags.Ephemeral
                     });
                 }
             }
@@ -105,7 +106,7 @@ module.exports = {
             // Risposta per pulsante non riconosciuto (risposta privata)
             return interaction.reply({ 
                 content: 'Azione pulsante non riconosciuta. | Unrecognized button action.', 
-                flags: Discord.InteractionResponseFlags.Ephemeral // <-- NUOVA SINTASSI
+                flags: Discord.InteractionResponseFlags.Ephemeral
             });
         }
 
