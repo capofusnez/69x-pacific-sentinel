@@ -4,7 +4,7 @@ module.exports = {
     // ------------------------------------------------------------
     // CONFIGURAZIONE BASE DEL BOT
     // ------------------------------------------------------------
-    PREFIX: '/', // Prefisso dei comandi (usiamo principalmente slash commands)
+    PREFIX: '/', 
 
     // ------------------------------------------------------------
     // CONFIGURAZIONE SISTEMA XP E LIVELING
@@ -32,13 +32,13 @@ module.exports = {
     // Tempo di inattività prima che un canale AI venga eliminato (in minuti)
     AI_SESSION_TIMEOUT_MINUTES: 30, 
     
-    // Calcolo del tempo in millisecondi (30 min * 60 sec * 1000 ms)
+    // Calcolo del tempo in millisecondi (30 min * 60 sec * 1000 ms = 1800000)
     AI_SESSION_TIMEOUT_MS: 30 * 60 * 1000, 
     
     // Frequenza con cui il bot esegue il check sui canali inattivi (in minuti)
     AI_CLEANUP_LOOP_MINUTES: 5, 
     
-    // Modello AI da utilizzare (gemini-2.5-flash è l'ultima versione stabile e veloce)
+    // Modello AI da utilizzare (gemini-2.5-flash)
     GEMINI_MODEL: "gemini-2.5-flash", 
     
     // ------------------------------------------------------------
@@ -49,7 +49,6 @@ module.exports = {
 
     // Definisci i tipi di ticket che gli utenti possono aprire
     TICKET_TYPES: {
-        // 'ID_PULSANTE': { label: 'Nome Mostrato', emoji: '🎫' }
         'support': { label: 'Richiesta di Supporto', emoji: '❓' },
         'report': { label: 'Segnala un Utente/Bug', emoji: '🚨' },
     },
@@ -71,5 +70,7 @@ module.exports = {
         PERMISSIONS: 'permissions.json',
         AI_SESSIONS: 'ai_sessions.json',
         SERVER_CONFIG: 'serverconfig.json',
+        // Se non usi rules_message.json, puoi rimuoverlo
+        // RULES_MESSAGE: 'rules_message.json'
     }
 };
