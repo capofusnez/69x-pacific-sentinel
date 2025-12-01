@@ -13,7 +13,7 @@ module.exports = {
         GAME_NAME_TO_TRACK: "DayZ", 
         XP_PER_TICK: 25, 
         XP_PER_MESSAGE: 15, 
-        TICK_INTERVAL_MS: 5 * 60 * 1000, // 300000 ms = 5 minuti
+        TICK_INTERVAL_MS: 5 * 60 * 1000, // Deve essere un numero
     },
 
     LEVEL_UP_ANNOUNCEMENT_CHANNEL_ID: "INSERISCI_ID_CANALE_ANNUNCI", 
@@ -23,8 +23,8 @@ module.exports = {
     // ------------------------------------------------------------
     AI_CATEGORY_NAME: "🤖 | AI SESSIONS", 
     AI_SESSION_TIMEOUT_MINUTES: 30, 
-    AI_SESSION_TIMEOUT_MS: 30 * 60 * 1000, // 1800000 ms = 30 minuti
-    AI_CLEANUP_LOOP_MINUTES: 5, 
+    AI_SESSION_TIMEOUT_MS: 30 * 60 * 1000, // Deve essere un numero
+    AI_CLEANUP_LOOP_MINUTES: 5, // Deve essere un numero
     GEMINI_MODEL: "gemini-2.5-flash", 
     
     // ------------------------------------------------------------
@@ -44,14 +44,12 @@ module.exports = {
 
     // ------------------------------------------------------------
     // CONFIGURAZIONE PATH FILE (Database Locali)
-    // Risolve l'errore "undefined caricato"
     // ------------------------------------------------------------
     FILES: {
         LEVELS: 'levels.json',
         PERMISSIONS: 'permissions.json',
         AI_SESSIONS: 'ai_sessions.json',
-        SERVER_CONFIG: 'serverconfig.json',
-        // Se usi rules_message, includilo. Altrimenti, NON aggiungere voci vuote.
-        // RULES_MESSAGE: 'rules_message.json'
+        SERVER_CONFIG: 'serverconfig.json'
+        // Rimosse tutte le virgole extra e voci vuote
     }
 };
