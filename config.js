@@ -13,10 +13,20 @@ module.exports = {
         GAME_NAME_TO_TRACK: "DayZ", 
         XP_PER_TICK: 25, 
         XP_PER_MESSAGE: 15, 
-        TICK_INTERVAL_MS: 5 * 60 * 1000, // Deve essere un numero
+        TICK_INTERVAL_MS: 5 * 60 * 1000, // Deve essere un numero (300000 ms)
     },
 
     LEVEL_UP_ANNOUNCEMENT_CHANNEL_ID: "INSERISCI_ID_CANALE_ANNUNCI", 
+    
+    // ⭐ ⭐ LA TUA LISTA DI RUOLI DI LIVELLO ⭐ ⭐
+    LEVEL_ROLES: [
+        { level: 0, roleId: "1442570652228784240" }, // Fresh Spawn
+        { level: 1, roleId: "1442570651696107711" }, // Survivor
+        { level: 5, roleId: "1442570650584875019" }, // Veteran Raider
+        { level: 10, roleId: "1442570649724784671" }, // Field Officer
+        { level: 15, roleId: "1442570648705568798" }, // Command Unit
+        { level: 20, roleId: "1442570648022024292" }  // Overlord
+    ],
 
     // ------------------------------------------------------------
     // CONFIGURAZIONE SISTEMA AI (GEMINI)
@@ -50,6 +60,5 @@ module.exports = {
         PERMISSIONS: 'permissions.json',
         AI_SESSIONS: 'ai_sessions.json',
         SERVER_CONFIG: 'serverconfig.json'
-        // Rimosse tutte le virgole extra e voci vuote
     }
 };
