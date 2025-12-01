@@ -5,52 +5,43 @@ const config = require('../config');
 const { getUserLevelInfo } = require('../utils/xpUtils');
 const { createAiSession } = require('../commands/ai');
 
-// ⭐ AGGIUNGI L'IMPORTAZIONE DEL GESTORE TICKET ⭐
-const { createTicketChannel } = require('./ticketCreate'); // Assumendo che il file sia in events/ticketCreate.js
+// ⭐ AGGIORNA L'IMPORTAZIONE DEL GESTORE TICKET ⭐
+const { createTicketChannel, closeTicket } = require('./ticketCreate'); 
 
 // La flag Ephemeral è rappresentata dal valore numerico 64.
 const EPHEMERAL_FLAG = 64;
 
 module.exports = {
-    name: Events.InteractionCreate,
-    once: false,
-    async execute(interaction) {
-        
-        // ----------------------------------------------------------------------------------
-        // 1. GESTIONE COMANDI SLASH
-        // ----------------------------------------------------------------------------------
-        if (interaction.isCommand()) {
-            const command = interaction.client.commands.get(interaction.commandName);
+// ...
+// ... (omesso il codice) ...
+// ...
 
-            if (!command) {
-                console.error(`Nessun comando trovato con il nome ${interaction.commandName}`);
-                return;
+        // ----------------------------------------------------------------------------------
+        // 2. GESTIONE PULSANTI (Buttons)
+        // ----------------------------------------------------------------------------------
+        if (interaction.isButton()) {
+            const customId = interaction.customId;
+            // ... (altre variabili) ...
+
+            // ... (omesso A e B) ...
+
+            // ⭐ C. Gestione Pulsanti Ticket (ticket_create_...) ⭐
+            if (customId.startsWith('ticket_create_')) {
+                return await createTicketChannel(interaction);
             }
 
-            try {
-                await command.execute(interaction);
-            } catch (error) {
-                console.error(`Errore nell'esecuzione del comando ${interaction.commandName}`);
-                console.error(error);
-                
-                const errorMessage = 'Si è verificato un errore durante l\'esecuzione di questo comando! | An error occurred while executing this command!';
-                
-                // Gestione errori comandi slash (risposta privata)
-                if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply({ 
-                        content: errorMessage, 
-                        flags: EPHEMERAL_FLAG // Usiamo il numero 64
-                    });
-                } else {
-                    await interaction.reply({ 
-                        content: errorMessage, 
-                        flags: EPHEMERAL_FLAG // Usiamo il numero 64
-                    });
-                }
+            // ⭐ D. Gestione Pulsante Chiusura Ticket (ticket_close) ⭐
+            if (customId === 'ticket_close') {
+                // ⭐ CHIAMA LA NUOVA FUNZIONE DI CHIUSURA ⭐
+                return await closeTicket(interaction); 
             }
-            return;
+
+            // --- E. Risposta predefinita per pulsante non riconosciuto ---
+            return interaction.reply({ 
+                content: 'Azione pulsante non riconosciuta. | Unrecognized button action.', 
+                flags: EPHEMERAL_FLAG // Usiamo il numero 64
+            });
         }
-
 
         // ----------------------------------------------------------------------------------
         // 2. GESTIONE PULSANTI (Buttons)
