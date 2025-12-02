@@ -61,7 +61,7 @@ module.exports = {
     ADMIN_ROLES: ["441203826322702347"], 
     MODERATOR_ROLES: ["1442570652228784240"], 
     // config.js (Aggiungi questa linea)
-    ROLE_ID_VERIFIED: "INSERISCI_QUI_L'ID_DEL_RUOLO",
+    ROLE_ID_VERIFIED: "1442570652228784240",
     // ------------------------------------------------------------
     // CONFIGURAZIONE PATH FILE (Database Locali)
     // ------------------------------------------------------------
