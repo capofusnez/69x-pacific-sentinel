@@ -67,36 +67,36 @@ module.exports = {
                 }
             }
             
-            // ⭐ C. GESTIONE PULSANTE ACCETTA REGOLE (ID: accept_rules) ⭐
-            if (customId === 'accept_rules') {
-                // Assicurati che ROLE_ID_VERIFIED sia impostato in config.js
-                const verifiedRoleId = config.ROLE_ID_VERIFIED; 
-                
-                if (!verifiedRoleId) {
-                     return interaction.reply({
-                        content: '❌ Errore di configurazione: ROLE_ID_VERIFIED non è impostato nel file config.js.',
-                        ephemeral: true
-                    });
-                }
+           // ⭐ C. GESTIONE PULSANTE ACCETTA REGOLE (ID: rules_accept_fresh-spawn) ⭐
+if (customId === 'rules_accept_fresh-spawn') { // <--- NUOVO ID CORRETTO
+    // Assicurati che ROLE_ID_VERIFIED sia impostato in config.js
+    const verifiedRoleId = config.ROLE_ID_VERIFIED; 
+    
+    if (!verifiedRoleId) {
+         return interaction.reply({
+            content: '❌ Errore di configurazione: ROLE_ID_VERIFIED non è impostato nel file config.js.',
+            ephemeral: true
+        });
+    }
 
-                try {
-                    // Aggiunge il ruolo all'utente che ha cliccato
-                    await interaction.member.roles.add(verifiedRoleId);
-                    
-                    // Risposta di conferma effimera
-                    return interaction.reply({
-                        content: '✅ Regole accettate! Ti è stato assegnato il ruolo di accesso al server.',
-                        ephemeral: true
-                    });
-                } catch (error) {
-                    console.error("Errore nell'assegnazione del ruolo (accept_rules):", error);
-                    // L'errore più comune è che il BOT non ha i permessi o il suo ruolo è più basso
-                    return interaction.reply({
-                        content: '❌ Non è stato possibile assegnarti il ruolo. Controlla che il BOT abbia i permessi di Gestisci Ruoli e che il suo ruolo sia sopra il ruolo "Verificato".',
-                        ephemeral: true
-                    });
-                }
-            }
+    try {
+        // Aggiunge il ruolo all'utente che ha cliccato
+        await interaction.member.roles.add(verifiedRoleId);
+        
+        // Risposta di conferma effimera
+        return interaction.reply({
+            content: '✅ Regole accettate! Ti è stato assegnato il ruolo di accesso al server.',
+            ephemeral: true
+        });
+    } catch (error) {
+        console.error("Errore nell'assegnazione del ruolo (rules_accept_fresh-spawn):", error);
+        // L'errore più comune è che il BOT non ha i permessi o il suo ruolo è più basso
+        return interaction.reply({
+            content: '❌ Non è stato possibile assegnarti il ruolo. Controlla che il BOT abbia i permessi di Gestisci Ruoli e che il suo ruolo sia sopra il ruolo "Verificato".',
+            ephemeral: true
+        });
+    }
+}
 
             // ⭐ D. Gestione Pulsanti Ticket (CREAZIONE) ⭐
             if (customId.startsWith('ticket_create_')) {
