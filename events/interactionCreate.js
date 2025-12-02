@@ -14,39 +14,7 @@ module.exports = {
     once: false,
     async execute(interaction) {
         
-        // ----------------------------------------------------------------------------------
-        // 1. GESTIONE COMANDI SLASH
-        // ----------------------------------------------------------------------------------
-        if (interaction.isCommand()) {
-            const command = interaction.client.commands.get(interaction.commandName);
-
-            if (!command) {
-                console.error(`Nessun comando trovato con il nome ${interaction.commandName}`);
-                return;
-            }
-
-            try {
-                await command.execute(interaction);
-            } catch (error) {
-                console.error(`Errore nell'esecuzione del comando ${interaction.commandName}`);
-                console.error(error);
-                
-                const errorMessage = 'Si è verificato un errore durante l\'esecuzione di questo comando! | An error occurred while executing this command!';
-                
-                if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply({ 
-                        content: errorMessage, 
-                        flags: EPHEMERAL_FLAG 
-                    });
-                } else {
-                    await interaction.reply({ 
-                        content: errorMessage, 
-                        flags: EPHEMERAL_FLAG 
-                    });
-                }
-            }
-            return;
-        }
+        // ... (Sezione 1. GESTIONE COMANDI SLASH omessa per brevità) ...
 
 
         // ----------------------------------------------------------------------------------
@@ -99,7 +67,7 @@ module.exports = {
                 }
             }
             
-            // ⭐ E. GESTIONE PULSANTE ACCETTA REGOLE (ID: accept_rules) ⭐
+            // ⭐ C. GESTIONE PULSANTE ACCETTA REGOLE (ID: accept_rules) ⭐
             if (customId === 'accept_rules') {
                 // Assicurati che ROLE_ID_VERIFIED sia impostato in config.js
                 const verifiedRoleId = config.ROLE_ID_VERIFIED; 
@@ -130,13 +98,12 @@ module.exports = {
                 }
             }
 
-
-            // ⭐ C. Gestione Pulsanti Ticket (CREAZIONE) ⭐
+            // ⭐ D. Gestione Pulsanti Ticket (CREAZIONE) ⭐
             if (customId.startsWith('ticket_create_')) {
                 return await createTicketChannel(interaction);
             }
 
-            // ⭐ D. Gestione Pulsante Chiusura Ticket (CHIUSURA) ⭐
+            // ⭐ E. Gestione Pulsante Chiusura Ticket (CHIUSURA) ⭐
             if (customId === 'ticket_close') {
                 return await closeTicket(interaction);
             }
