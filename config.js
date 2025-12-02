@@ -59,8 +59,9 @@ module.exports = {
     // CONFIGURAZIONE PERMESSI E RUOLI
     // ------------------------------------------------------------
     ADMIN_ROLES: ["441203826322702347"], 
-    MODERATOR_ROLES: ["INSERISCI_ID_RUOLO_MODERATORE"], 
-
+    MODERATOR_ROLES: ["1442570652228784240"], 
+    // config.js (Aggiungi questa linea)
+    ROLE_ID_VERIFIED: "INSERISCI_QUI_L'ID_DEL_RUOLO",
     // ------------------------------------------------------------
     // CONFIGURAZIONE PATH FILE (Database Locali)
     // ------------------------------------------------------------
